@@ -60,7 +60,7 @@ async function main() {
 
   for (let file in fileNames) {
     if (fileNames[file].includes("metadata.nt.json")) {
-      const text = JSON.parse(fs.readFileSync(path.join(collector.dataDir, fileNames[file]), "utf8"));
+      const text = await JSON.parse(fs.readFileSync(path.join(collector.dataDir, fileNames[file]), "utf8"));
       const obj = {};
       let speakers = [];
       let iceType;
