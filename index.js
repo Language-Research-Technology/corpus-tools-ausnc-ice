@@ -73,7 +73,6 @@ async function main() {
           obj['@id'] = generateArcpId(collector.namespace, 'Document', text[child]['@id'].replace("http://app.alveo.edu.au/catalog/ice/", ""));
           obj["@type"] = "RepositoryObject";
 
-
           obj.name = text[child]["http://purl.org/dc/terms/identifier"][0]["@value"];
           if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/subtitle"]) {
             obj.name += " - " + text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/subtitle"][0]["@value"];
@@ -81,6 +80,7 @@ async function main() {
 
           obj.language = engLang;
           obj.conformsTo = { "@id": languageProfileURI("Object") };
+          obj.license = licenses.data_license;
 
           let createDate
 
@@ -116,7 +116,6 @@ async function main() {
             obj.description = text[child]["http://purl.org/dc/terms/subject"][0]["@value"]
           }
 
-
           text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/mode"].some(mode => mode["@id"] === "http://ns.ausnc.org.au/schemas/ausnc_md_model/spoken") ? iceType = "Transcription" : iceType = "PrimaryText";
 
         } else if (!JSON.stringify(text[child]['@id']).includes('person')) {
@@ -125,6 +124,7 @@ async function main() {
             "@id": text[child]["http://purl.org/dc/terms/identifier"][0]["@value"],
             "name": text[child]["http://purl.org/dc/terms/title"][0]["@value"],
             "@type": ["File", iceType, text[child]["http://purl.org/dc/terms/type"][0]["@value"]],
+            "license": licenses.data_license,
             "encodingFormat": "text/plain",
             "linguisticGenre": vocab.getVocabItem("Report"),
             "size": text[child]["http://purl.org/dc/terms/extent"][0]["@value"]
@@ -134,10 +134,8 @@ async function main() {
 
           obj['hasPart'].push(objFile);
         } else if (JSON.stringify(text[child]['@id']).includes('person')) {
-          speakers.push(text[child])
+          speakers.push(text[child]);
         }
-
-
 
       }
 
@@ -163,9 +161,6 @@ async function main() {
       }
     }
   }
-
-
-
 
 
   //Debug data being exported
