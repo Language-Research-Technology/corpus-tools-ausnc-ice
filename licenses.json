@@ -1,0 +1,18 @@
+{
+  "metadata_license": {
+    "@id": "https://creativecommons.org/licenses/by/4.0/",
+    "@type": "OrganizationReuseLicense",
+    "metadataIsPublic": true,
+    "allowTextIndex": true,
+    "name": "Attribution 4.0 International (CC BY 4.0)",
+    "description": "You are free to:\nShare — copy and redistribute the material in any medium or format\nAdapt — remix, transform, and build upon the material\nfor any purpose, even commercially.\nThis license is acceptable for Free Cultural Works.\nThe licensor cannot revoke these freedoms as long as you follow the license terms."
+  },
+  "data_license":{
+    "@id": "https://www.ldaca.edu.au/licenses/ice/v1/",
+    "@type": "OrganizationReuseLicense",
+    "metadataIsPublic": true,
+    "allowTextIndex": true,
+    "name": "Data License for The International Corpus of English (Australian)",
+    "description": "Files are only available to authorized researchers"
+  }
+}
