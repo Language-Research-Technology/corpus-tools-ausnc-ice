@@ -23,6 +23,7 @@
     "ro-crate": "^3.2.0",
     "xlsx": "^0.18.5",
     "xml2json": "^0.12.0",
-    "xslx": "^1.0.0"
+    "xslx": "^1.0.0",
+    "@describo/data-packs": "^0.8.0"
   }
 }

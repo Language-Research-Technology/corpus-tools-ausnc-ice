@@ -6,6 +6,7 @@ const path = require('path');
 const { LdacProfile } = require('ldac-profile');
 const parser = require('xml2json');
 const XLSX = require('xlsx');
+const { DataPack } = require('@describo/data-packs');
 
 async function main() {
 
@@ -15,9 +16,13 @@ async function main() {
   await vocab.load();
   const languages = new Languages();
   await languages.fetch();
-  const engLang = languages.getLanguage('English');
-  //For debugging until Data Packs can be used to generate language codes
-  engLang['@id'] = "https://glottolog.org/resource/languoid/id/stan1293";
+  let datapack = new DataPack({ dataPacks: ['Glottolog'], indexFields: ['name'] });
+
+  await datapack.load();
+    let engLang = datapack.get({
+      field: "name",
+      value: "English",
+    });
 
   //const audioFiles = new Files(path.join(dataDir, "Sound\ files"), 2);
   const collector = new Collector();
