@@ -37,7 +37,7 @@ async function main() {
   corpusCrate.addContext(vocab.getContext());
   const corpusRoot = corpus.rootDataset;
 
-  corpus.mintArcpId('corpus', 'root');
+  corpus.mintArcpId();
   corpusCrate.addProfile(languageProfileURI('Collection'));
 
   corpusRoot['@type'] = ['Dataset', 'RepositoryCollection'];
@@ -75,7 +75,8 @@ async function main() {
           children.includes(key) ? null : children.push(key);
         });
         if (JSON.stringify(text[child]['@type']).includes('AusNCObject')) {
-          obj['@id'] = generateArcpId(collector.namespace, 'Document', text[child]['@id'].replace("http://app.alveo.edu.au/catalog/ice/", ""));
+          const id = text[child]['@id'].replace("http://app.alveo.edu.au/catalog/ice/", "");
+          obj['@id'] = generateArcpId(collector.namespace, 'Document', id);
           obj["@type"] = "RepositoryObject";
 
           obj.name = text[child]["http://purl.org/dc/terms/identifier"][0]["@value"];
