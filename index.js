@@ -53,7 +53,8 @@ async function main() {
   corpusCrate.addValues(corpusRoot, 'publisher', publisherObj);
   const author = data.creator.split(',');
   const authorObj = { "@id": author[1], "name": author[0], "@type": "Person" };
-  corpusCrate.addValues(corpusRoot, 'author', authorObj);
+  corpusCrate.addValues(corpusRoot, 'creator', authorObj);
+  corpusCrate.addValues(corpusRoot, 'compiler', authorObj);
   corpusRoot['datePublished'] = data.created.replace(/.*(\d{4})$/g, '$1');
   corpusCrate.addValues(corpusRoot, 'license', licenses.data_license);
   corpusRoot['language'] = engLang;
