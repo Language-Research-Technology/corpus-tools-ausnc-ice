@@ -8,9 +8,9 @@ REPO_SCRATCH_DIR=scratch
 REPO_OUT_DIR=./ocfl-repo
 BASE_TMP_DIR=temp
 
-REPO_NAME=ATAP
-NAMESPACE=override
-CORPUS_NAME=override
+REPO_NAME=LDaCA
+NAMESPACE=international-corpus-of-english-australia
+CORPUS_NAME=international-corpus-of-english-australia
 JSON=${BASE_DATA_DIR}/override
 DATA_DIR=${BASE_DATA_DIR}/override
 TEMP_DIR=${BASE_TMP_DIR}
