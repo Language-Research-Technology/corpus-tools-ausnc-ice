@@ -7,6 +7,9 @@ const { LdacProfile } = require('ldac-profile');
 const parser = require('xml2json');
 const XLSX = require('xlsx');
 const { DataPack } = require('@describo/data-packs');
+const shell = require("shelljs");
+const { existsSync } = require('fs');
+const PRONOM_URI_BASE = 'https://www.nationalarchives.gov.uk/PRONOM/';
 
 async function main() {
 
@@ -54,13 +57,21 @@ async function main() {
   const author = data.creator.split(',');
   const authorObj = { "@id": author[1], "name": author[0], "@type": "Person" };
   corpusCrate.addValues(corpusRoot, 'creator', authorObj);
-  corpusCrate.addValues(corpusRoot, 'compiler', authorObj);
+  corpusCrate.addValues(corpusRoot, 'compaaailer', authorObj);
   corpusRoot['datePublished'] = data.created.replace(/.*(\d{4})$/g, '$1');
   corpusCrate.addValues(corpusRoot, 'license', licenses.data_license);
   corpusRoot['language'] = engLang;
 
   const metadataDescriptor = corpusCrate.getItem('ro-crate-metadata.json');
   metadataDescriptor.license = licenses.metadata_license;
+
+  let siegfriedData = {}
+  let createFile = true;
+  if (fs.existsSync(path.join(collector.dataDir, "siegfriedOutput.json"))) {
+    console.log("Reading SF Data");
+    siegfriedData = JSON.parse(fs.readFileSync(path.join(collector.dataDir, "siegfriedOutput.json")));
+    createFile = false;
+  }
 
   let children = [];
 
@@ -132,10 +143,12 @@ async function main() {
             "name": text[child]["http://purl.org/dc/terms/title"][0]["@value"],
             "@type": ["File", iceType, text[child]["http://purl.org/dc/terms/type"][0]["@value"]],
             "license": licenses.data_license,
-            "encodingFormat": "text/plain",
+            "encodingFormat": [],
             "linguisticGenre": vocab.getVocabItem("Report"),
             "size": text[child]["http://purl.org/dc/terms/extent"][0]["@value"]
           }
+          let fileSF;
+          readSiegfried(objFile, objFile['@id'], fileSF, siegfriedData, collector.dataDir);
 
           iceType === "Transcription" ? objFile.modality = vocab.getVocabItem("SpokenLanguage") : objFile.modality = vocab.getVocabItem("WrittenLanguage");
 
@@ -181,6 +194,12 @@ async function main() {
     }
     process.exit()
   }
+
+  if(createFile){
+    console.log("Writing SF Data")
+    fs.writeFileSync(path.join(collector.dataDir, "siegfriedOutput.json"), JSON.stringify(siegfriedData));
+  }
+
   for (const entity of corpusCrate.graph) {
     if (entity['@type'].includes('File')) {
       await corpus.addFile(entity, collector.dataDir, null, true); //adds each file to the repository 
@@ -191,5 +210,27 @@ async function main() {
 
 }
 
+function readSiegfried(objFile, fileID, fileSF, siegfriedData, dataDir){
+  if (siegfriedData[fileID]) {
+    fileSF = siegfriedData[fileID].files[0];
+  } else {
+    let sfData;
+    try {
+      console.log(`Running SF on "${fileID}"`);
+      sfData = JSON.parse(shell.exec(`sf -nr -json "${path.join(dataDir, fileID)}"`, { silent: true }).stdout);
+    } catch (e) {
+      console.error("File identification error: " + e);
+      console.error("Have you installed Siegfried?");
+      console.error("https://github.com/richardlehane/siegfried/wiki/Getting-started");
+      process.exit(1);
+    }
+    fileSF = sfData.files[0];
+    siegfriedData[fileID] = sfData;
+  }
+  objFile['encodingFormat'].push(fileSF.matches[0].mime);
+  let formatID = PRONOM_URI_BASE + fileSF.matches[0].id
+  objFile['encodingFormat'].push({'@id': formatID})
+  objFile['extent'] = fileSF.filesize;
+}
 
 main();
