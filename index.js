@@ -78,6 +78,7 @@ async function main() {
   let children = [];
 
   for (let c in subCorpus) {
+    const subCorpusName = `ICE: ${subCorpus[c]}`;
     let newCorpus = collector.newObject();
     let newCorpusCrate = newCorpus.crate;
     newCorpusCrate.addContext(vocab.getContext());
@@ -85,10 +86,10 @@ async function main() {
     newCorpus.mintArcpId(c);
     newCorpusCrate.addProfile(languageProfileURI('Collection'));
     newCorpusRoot['@type'] = ['Dataset', 'RepositoryCollection'];
-    newCorpusRoot["name"] = c + ": " + subCorpus[c];
+    newCorpusRoot["name"] = subCorpusName;
     newCorpusRoot["description"] = subCorpus[c] + " from the International Corpus of English (Aus)";
     newCorpusRoot["language"] = engLang;
-    newCorpusRoot.memberOf = [{ "@id": corpus.id }]
+    newCorpusRoot.memberOf = [{ "@id": corpus.id }];
     newCorpusCrate.addValues(newCorpusRoot, 'creator', authorObj);
     newCorpusCrate.addValues(newCorpusRoot, 'compiler', authorObj);
     newCorpusCrate.addValues(newCorpusRoot, 'license', licenses.data_license);
