@@ -78,7 +78,7 @@ async function main() {
   let children = [];
 
   for (let c in subCorpus) {
-    const subCorpusName = `ICE: ${subCorpus[c]}`;
+    const subCorpusName = `ICE: ${c}: ${subCorpus[c]}`;
     let newCorpus = collector.newObject();
     let newCorpusCrate = newCorpus.crate;
     newCorpusCrate.addContext(vocab.getContext());
@@ -180,7 +180,7 @@ async function main() {
               iceType = "Transcription";
               obj.modality = vocab.getVocabItem("SpokenLanguage");
             } else {
-              iceType = "PrimaryText";
+              iceType = "PrimaryMaterial";
               obj.modality = vocab.getVocabItem("WrittenLanguage");
             }
 
@@ -221,9 +221,10 @@ async function main() {
               //"linguisticGenre": vocab.getVocabItem("Report"),
               "size": text[child]["http://purl.org/dc/terms/extent"][0]["@value"]
             }
+            
             let fileSF;
             readSiegfried(objFile, objFile['@id'], fileSF, siegfriedData, collector.dataDir);
-            // iceType === "Transcription" ? objFile.modality = vocab.getVocabItem("SpokenLanguage") : objFile.modality = vocab.getVocabItem("WrittenLanguage");
+            iceType === "Transcription" ? objFile.modality = vocab.getVocabItem("SpokenLanguage") : objFile.modality = vocab.getVocabItem("WrittenLanguage");
             obj['hasPart'].push(objFile);
           } else if (JSON.stringify(text[child]['@id']).includes('person')) {
             speakers.push(text[child]);
