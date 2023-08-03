@@ -226,6 +226,7 @@ async function main() {
             readSiegfried(objFile, objFile['@id'], fileSF, siegfriedData, collector.dataDir);
             iceType === "Transcription" ? objFile.modality = vocab.getVocabItem("SpokenLanguage") : objFile.modality = vocab.getVocabItem("WrittenLanguage");
             obj['hasPart'].push(objFile);
+            obj.indexableText = objFile;
           } else if (JSON.stringify(text[child]['@id']).includes('person')) {
             speakers.push(text[child]);
           }

@@ -18,7 +18,7 @@
     "language-data-commons-vocabs": "github:Language-Research-Technology/language-data-commons-vocabs",
     "ldac-profile": "github:Language-Research-Technology/ldac-profile",
     "lodash": "^4.17.21",
-    "oni-ocfl": "github:Arkisto-Platform/oni-ocfl",
+    "oni-ocfl": "github:Language-Research-Technology/oni-ocfl",
     "read-excel-file": "^5.5.3",
     "request": "^2.88.2",
     "ro-crate": "^3.2.0",
