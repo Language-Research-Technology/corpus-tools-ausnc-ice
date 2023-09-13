@@ -2,17 +2,28 @@
   "metadata_license": {
     "@id": "https://creativecommons.org/licenses/by/4.0/",
     "@type": "OrganizationReuseLicense",
+    "authorizationWorkflow": "AgreeToTerms",
     "metadataIsPublic": true,
     "allowTextIndex": true,
     "name": "Attribution 4.0 International (CC BY 4.0)",
     "description": "You are free to:\nShare — copy and redistribute the material in any medium or format\nAdapt — remix, transform, and build upon the material\nfor any purpose, even commercially.\nThis license is acceptable for Free Cultural Works.\nThe licensor cannot revoke these freedoms as long as you follow the license terms."
   },
-  "data_license":{
-    "@id": "https://creativecommons.org/licenses/by/4.0/",
+  "data_license": {
+    "@id": "https://language-research-technology.github.io/qa/licenses/ice-aus/login/v1/",
     "@type": "OrganizationReuseLicense",
+    "authorizationWorkflow": "AgreeToTerms",
     "metadataIsPublic": true,
     "allowTextIndex": true,
-    "name": "Attribution 4.0 International (CC BY 4.0)",
-    "description": "You are free to:\nShare — copy and redistribute the material in any medium or format\nAdapt — remix, transform, and build upon the material\nfor any purpose, even commercially.\nThis license is acceptable for Free Cultural Works.\nThe licensor cannot revoke these freedoms as long as you follow the license terms."
+    "name": "Data License for Application for the International Corpus of English",
+    "description": "You need to agree to the terms and conditions for access"
+  },
+  "data_license_application": {
+    "@id": "https://language-research-technology.github.io/qa/licenses/ice-aus/request/v1/",
+    "@type": "OrganizationReuseLicense",
+    "authorizationWorkflow": "AuthorizationByApplication",
+    "metadataIsPublic": true,
+    "allowTextIndex": true,
+    "name": "Restricted Data License for Application for the International Corpus of English",
+    "description": "This license is restricted apply for access"
   }
 }

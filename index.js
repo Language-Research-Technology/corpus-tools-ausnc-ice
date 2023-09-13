@@ -102,7 +102,6 @@ async function main() {
     let corpusFileNames = fileNames.filter((cn) => cn.includes(c));
 
     for (let file in corpusFileNames) {
-
       if (corpusFileNames[file].includes("metadata.nt.json")) {
         const text = await JSON.parse(fs.readFileSync(path.join(collector.dataDir, corpusFileNames[file]), "utf8"));
         const obj = {};
@@ -139,9 +138,13 @@ async function main() {
 
             obj.language = engLang;
             obj.conformsTo = { "@id": languageProfileURI("Object") };
-            obj.license = licenses.data_license;
-
-            let createDate
+            if(c === 'W1A') {
+              // FOR UAT testing we make 'ICE: Unpublished student writing' W1A subcorpus restricted
+              obj.license = licenses.data_license_application;
+            } else {
+              obj.license = licenses.data_license;
+            }
+            let createDate;
 
             try {
               createDate = text[child]["http://purl.org/dc/terms/created"][0]["@value"].split(/\//);
@@ -212,11 +215,18 @@ async function main() {
             }
 
           } else if (!JSON.stringify(text[child]['@id']).includes('person')) {
+            let l;
+            if(c === 'W1A') {
+              // FOR UAT testing we make 'ICE: Unpublished student writing' W1A subcorpus restricted
+              l = licenses.data_license_application;
+            } else{
+              l = licenses.data_license;
+            }
             let objFile = {
               "@id": text[child]["http://purl.org/dc/terms/identifier"][0]["@value"],
               "name": text[child]["http://purl.org/dc/terms/title"][0]["@value"],
               "@type": ["File", iceType, text[child]["http://purl.org/dc/terms/type"][0]["@value"]],
-              "license": licenses.data_license,
+              "license": l,
               "encodingFormat": [],
               //"linguisticGenre": vocab.getVocabItem("Report"),
               "size": text[child]["http://purl.org/dc/terms/extent"][0]["@value"]
