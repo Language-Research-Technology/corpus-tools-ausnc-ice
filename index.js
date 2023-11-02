@@ -45,7 +45,7 @@ async function main() {
 
   corpusRoot['@type'] = ['Dataset', 'RepositoryCollection'];
 
-  const data = await fs.readJSON(collector.excelFile);
+  const data = await fs.readJSON("ICE.json");
   const licenses = fs.readJSONSync('licenses.json');
   const fileNames = fs.readdirSync(collector.dataDir);
 
@@ -63,7 +63,7 @@ async function main() {
   corpusRoot['datePublished'] = data.created.replace(/.*(\d{4}).$/g, '$1');
   corpusRoot['temporal'] = data.created.replace(/.*?(\d{4}).+?(\d{4}).$/g, '$1/$2');
   corpusCrate.addValues(corpusRoot, 'license', licenses.data_license);
-  corpusRoot['language'] = engLang;
+  corpusRoot['inLanguage'] = engLang;
   const metadataDescriptor = corpusCrate.getItem('ro-crate-metadata.json');
   metadataDescriptor.license = licenses.metadata_license;
 
@@ -88,7 +88,7 @@ async function main() {
     newCorpusRoot['@type'] = ['Dataset', 'RepositoryCollection'];
     newCorpusRoot["name"] = subCorpusName;
     newCorpusRoot["description"] = subCorpus[c] + " from the International Corpus of English (Aus)";
-    newCorpusRoot["language"] = engLang;
+    newCorpusRoot["inLang"] = engLang;
     newCorpusRoot.memberOf = [{ "@id": corpus.id }];
     newCorpusCrate.addValues(newCorpusRoot, 'creator', authorObj);
     newCorpusCrate.addValues(newCorpusRoot, 'compiler', authorObj);
@@ -137,7 +137,7 @@ async function main() {
 
             // obj.name = obj.name.replace(/^(.+?\.)(.+:.+)/,"$1");
 
-            obj.language = engLang;
+            obj.inLanguage = engLang;
             obj.conformsTo = { "@id": languageProfileURI("Object") };
             obj.license = licenses.data_license;
 
@@ -178,10 +178,10 @@ async function main() {
 
             if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/mode"].some(mode => mode["@id"] === "http://ns.ausnc.org.au/schemas/ausnc_md_model/spoken")) {
               iceType = "Transcription";
-              obj.modality = vocab.getVocabItem("SpokenLanguage");
+              obj.communicationMode = vocab.getVocabItem("SpokenLanguage");
             } else {
               iceType = "PrimaryMaterial";
-              obj.modality = vocab.getVocabItem("WrittenLanguage");
+              obj.communicationMode = vocab.getVocabItem("WrittenLanguage");
             }
 
             if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/interactivity"]) {
