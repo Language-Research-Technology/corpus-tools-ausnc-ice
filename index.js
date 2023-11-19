@@ -1,14 +1,13 @@
 const { Collector, generateArcpId } = require('oni-ocfl');
 const { languageProfileURI, Languages, Vocab } = require('language-data-commons-vocabs');
 const fs = require('fs-extra');
-const { first, flatMap } = require('lodash');
+const { cloneDeep} = require('lodash');
 const path = require('path');
 const { LdacProfile } = require('ldac-profile');
 const parser = require('xml2json');
 const XLSX = require('xlsx');
 const { DataPack } = require('@describo/data-packs');
 const shell = require("shelljs");
-const { existsSync } = require('fs');
 const PRONOM_URI_BASE = 'https://www.nationalarchives.gov.uk/PRONOM/';
 
 async function main() {
@@ -68,12 +67,12 @@ async function main() {
   metadataDescriptor.license = licenses.metadata_license;
 
   let siegfriedData = {}
-  let createFile = true;
+
   if (fs.existsSync(path.join(collector.dataDir, "siegfriedOutput.json"))) {
     console.log("Reading SF Data");
     siegfriedData = JSON.parse(fs.readFileSync(path.join(collector.dataDir, "siegfriedOutput.json")));
-    createFile = false;
   }
+  let siegfriedDataRaw = cloneDeep(siegfriedData);
 
   let children = [];
 
@@ -134,8 +133,6 @@ async function main() {
             } else if (text[child]["http://purl.org/dc/terms/subject"]) {
               obj.name += " - " + text[child]["http://purl.org/dc/terms/subject"][0]["@value"].replace(/^(.+?\.)(.+:.+)/, "$1");
             }
-
-            // obj.name = obj.name.replace(/^(.+?\.)(.+:.+)/,"$1");
 
             obj.inLanguage = engLang;
             obj.conformsTo = { "@id": languageProfileURI("Object") };
@@ -215,16 +212,22 @@ async function main() {
             let objFile = {
               "@id": text[child]["http://purl.org/dc/terms/identifier"][0]["@value"],
               "name": text[child]["http://purl.org/dc/terms/title"][0]["@value"],
-              "@type": ["File", iceType, text[child]["http://purl.org/dc/terms/type"][0]["@value"]],
+              "@type": ["File"],
               "license": licenses.data_license,
               "encodingFormat": [],
-              //"linguisticGenre": vocab.getVocabItem("Report"),
-              "size": text[child]["http://purl.org/dc/terms/extent"][0]["@value"]
+              "size": text[child]["http://purl.org/dc/terms/extent"][0]["@value"],
             }
-            
+            if(objFile["name"].match(/^S/)){
+             objFile.materialType = "Transcription";
+             objFile.communicationMode = vocab.getVocabItem("SpokenLanguage");
+             console.log(objFile)
+            } else {
+              objFile.materialType = "PrimaryText"
+              objFile.communicationMode = vocab.getVocabItem("WrittenLanguage");
+            }
+
             let fileSF;
             readSiegfried(objFile, objFile['@id'], fileSF, siegfriedData, collector.dataDir);
-            iceType === "Transcription" ? objFile.modality = vocab.getVocabItem("SpokenLanguage") : objFile.modality = vocab.getVocabItem("WrittenLanguage");
             obj['hasPart'].push(objFile);
             obj.indexableText = objFile;
           } else if (JSON.stringify(text[child]['@id']).includes('person')) {
@@ -263,160 +266,7 @@ async function main() {
     await newCorpus.addToRepo();
 
   }
-  /*
-    for (let file in fileNames) {
-      if (fileNames[file].includes("metadata.nt.json")) {
-        const text = await JSON.parse(fs.readFileSync(path.join(collector.dataDir, fileNames[file]), "utf8"));
-        const obj = {};
-        let speakers = [];
-        let iceType;
-        obj.hasPart = [];
-        for (let child in text) {
-          Object.keys(text[child]).forEach(function (key) {
-            children.includes(key) ? null : children.push(key);
-          });
-          if (JSON.stringify(text[child]['@type']).includes('AusNCObject')) {
   
-            const id = text[child]['@id'].replace("http://app.alveo.edu.au/catalog/ice/", "");
-            obj['@id'] = generateArcpId(collector.namespace, 'Document', id);
-            obj["@type"] = "RepositoryObject";
-  
-            obj.name = text[child]["http://purl.org/dc/terms/identifier"][0]["@value"];
-            if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/source"]) {
-              obj.name += " : " + text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/source"][0]["@value"];
-            } else if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/genre"]) {
-              obj.name += " : " + text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/genre"][0]["@value"];
-            } else if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/communicative_situation"]) {
-              obj.name += " : " + text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/communicative_situation"][0]["@value"].replace(/./, c=>c.toUpperCase());
-            } else if (text[child]["http://purl.org/dc/terms/title"]){
-              obj.name += " : " + text[child]["http://purl.org/dc/terms/title"][0]["@value"];
-            }
-            if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/subtitle"]) {
-              obj.name += " - " + text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/subtitle"][0]["@value"];
-            } else if (text[child]["http://purl.org/dc/terms/subject"]) {
-              obj.name += " - " + text[child]["http://purl.org/dc/terms/subject"][0]["@value"];
-            }
-  
-            obj.language = engLang;
-            obj.conformsTo = { "@id": languageProfileURI("Object") };
-            obj.license = licenses.data_license;
-  
-            let createDate
-  
-            try {
-              createDate = text[child]["http://purl.org/dc/terms/created"][0]["@value"].split(/\//);
-            } catch (err) {
-              try {
-                createDate = text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/source"][0]["@value"].split("-")[1].trim().split(/\//);
-              } catch (err) {
-  
-              }
-            }
-  
-            if (typeof createDate !== 'undefined') {
-  
-              createDate = createDate.filter(function (e) { return e });
-  
-              createDate.reverse();
-              if (createDate[2]) {
-                createDate[2] = createDate[2].padStart(2, '0');
-              }
-              createDate[0] = createDate[0].padStart(4, '19');
-  
-              if (createDate[1]) {
-                createDate[1] = createDate[1].padStart(2, '0');
-              }
-  
-              let createdDate = createDate.join("-");
-  
-              obj.datePublished = createdDate;
-            }
-  
-            if (typeof text[child]["http://purl.org/dc/terms/subject"] !== 'undefined') {
-              obj.description = text[child]["http://purl.org/dc/terms/subject"][0]["@value"];
-            }
-  
-            if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/mode"].some(mode => mode["@id"] === "http://ns.ausnc.org.au/schemas/ausnc_md_model/spoken")) {
-              iceType = "Transcription";
-              obj.modality = vocab.getVocabItem("SpokenLanguage");
-            } else {
-              iceType = "PrimaryText";
-              obj.modality = vocab.getVocabItem("WrittenLanguage");
-            }
-  
-            if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/interactivity"]) {
-              if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/interactivity"][0]["@id"].includes("dialogue")) {
-                obj.linguisticGenre = vocab.getVocabItem("Dialogue");
-              } else if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/interactivity"][0]["@id"].includes("monologue")) {
-                obj.linguisticGenre = vocab.getVocabItem("Oratory");
-              } else if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/interactivity"][0]["@id"].includes("interview")) {
-                obj.linguisticGenre = vocab.getVocabItem("Interview");
-              } 
-            } else if (iceType === "Transcription"){
-              obj.linguisticGenre = vocab.getVocabItem("Dialogue");
-              //console.log(text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/communication_setting"])
-            } else {
-              console.log(obj.name);
-              let commSetting = text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/communication_setting"][0]["@id"].replace("http://ns.ausnc.org.au/schemas/ausnc_md_model/","");
-              console.log(commSetting)
-              let dataMapping = {
-                "educational":"Informational",
-                "intitutional":"Informational",
-                "popular": "Informational",
-                "fiction": "Narrative"
-              }
-              obj.linguisticGenre = vocab.getVocabItem(dataMapping[commSetting]);
-              if(obj["@id"].includes("W2C")){
-                obj.linguisticGenre = vocab.getVocabItem("Report");
-              }
-            
-            //console.log(text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/interactivity"][0]["@id"]
-            //  console.log(text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/communication_setting"])
-            }
-            //console.log(text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/interactivity"][0]["@id"])
-          } else if (!JSON.stringify(text[child]['@id']).includes('person')) {
-            let objFile = {
-              "@id": text[child]["http://purl.org/dc/terms/identifier"][0]["@value"],
-              "name": text[child]["http://purl.org/dc/terms/title"][0]["@value"],
-              "@type": ["File", iceType, text[child]["http://purl.org/dc/terms/type"][0]["@value"]],
-              "license": licenses.data_license,
-              "encodingFormat": [],
-              //"linguisticGenre": vocab.getVocabItem("Report"),
-              "size": text[child]["http://purl.org/dc/terms/extent"][0]["@value"]
-            }
-            let fileSF;
-            readSiegfried(objFile, objFile['@id'], fileSF, siegfriedData, collector.dataDir);
-            // iceType === "Transcription" ? objFile.modality = vocab.getVocabItem("SpokenLanguage") : objFile.modality = vocab.getVocabItem("WrittenLanguage");
-            obj['hasPart'].push(objFile);
-          } else if (JSON.stringify(text[child]['@id']).includes('person')) {
-            speakers.push(text[child]);
-          }
-        }
-  
-        corpusCrate.addValues(corpusRoot, 'hasMember', obj);
-  
-        for (person in speakers) {
-          const speaker = {
-            "@id": generateArcpId(collector.namespace, "speaker", speakers[person]["@id"].replace("http://app.alveo.edu.au/catalog/ice/person/", "")),
-            "@type": "Speaker"
-          }
-          for (let key in speakers[person]) {
-            if (key.startsWith('http://ns.ausnc.org.au/schemas/ausnc_md_model')) {
-              const newKey = key.replace('http://ns.ausnc.org.au/schemas/ausnc_md_model/', '');
-              speaker[newKey] = speakers[person][key][0]["@value"];
-            }
-            if (key.startsWith('http://xmlns.com/foaf/0.1/')) {
-              const newKey = key.replace('http://xmlns.com/foaf/0.1/', '');
-              speaker[newKey] = speakers[person][key][0]["@value"];
-            }
-  
-          }
-          corpusCrate.addValues(obj, 'speaker', speaker);
-        }
-      }
-    }*/
-
-
   //Debug data being exported
   if (collector.debug) {
     fs.writeFileSync("ro-crate_for_debug.json", JSON.stringify(corpusCrate, null, 2));
@@ -429,9 +279,9 @@ async function main() {
     process.exit()
   }
 
-  if (createFile) {
+  if (siegfriedData !== siegfriedDataRaw) {
     console.log("Writing SF Data")
-    fs.writeFileSync(path.join(collector.dataDir, "siegfriedOutput.json"), JSON.stringify(siegfriedData));
+    fs.writeFileSync(path.join(process.cwd(), "siegfriedOutput.json"), JSON.stringify(siegfriedData));
   }
 
   for (const entity of corpusCrate.graph) {
