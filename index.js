@@ -30,6 +30,9 @@ async function main() {
   const collector = new Collector();
 
   await collector.connect(); // Make or find the OCFL repo
+  const data = await fs.readJSON("ICE.json");
+  collector.namespace = data.doi;
+
   // Get a new crate
 
   // This is the main crate - TODO: actually have some data in the template collector.templateCrateDir and add it below.
@@ -44,7 +47,6 @@ async function main() {
 
   corpusRoot['@type'] = ['Dataset', 'RepositoryCollection'];
 
-  const data = await fs.readJSON("ICE.json");
   const licenses = fs.readJSONSync('licenses.json');
   const fileNames = fs.readdirSync(collector.dataDir);
 
@@ -220,9 +222,8 @@ async function main() {
             if(objFile["name"].match(/^S/)){
              objFile.materialType = "Transcription";
              objFile.communicationMode = vocab.getVocabItem("SpokenLanguage");
-             console.log(objFile)
             } else {
-              objFile.materialType = "PrimaryText"
+              objFile.materialType = "PrimaryMaterial"
               objFile.communicationMode = vocab.getVocabItem("WrittenLanguage");
             }
 
