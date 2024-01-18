@@ -1,7 +1,8 @@
 {
   "metadata_license": {
     "@id": "https://creativecommons.org/licenses/by/4.0/",
-    "@type": "OrganizationReuseLicense",
+    "@type": "DataReuseLicense",
+    "authorizationWorkflow": "AgreeToTerms",
     "metadataIsPublic": true,
     "allowTextIndex": true,
     "name": "Attribution 4.0 International (CC BY 4.0)",
@@ -9,7 +10,8 @@
   },
   "data_license":{
     "@id": "https://creativecommons.org/licenses/by/4.0/",
-    "@type": "OrganizationReuseLicense",
+    "@type": "DataReuseLicense",
+    "authorizationWorkflow": "AgreeToTerms",
     "metadataIsPublic": true,
     "allowTextIndex": true,
     "name": "Attribution 4.0 International (CC BY 4.0)",
