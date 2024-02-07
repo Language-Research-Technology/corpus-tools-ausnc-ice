@@ -70,9 +70,9 @@ async function main() {
 
   let siegfriedData = {}
 
-  if (fs.existsSync(path.join(collector.dataDir, "siegfriedOutput.json"))) {
+  if (fs.existsSync(path.join(process.cwd(), "siegfriedOutput.json"))) {
     console.log("Reading SF Data");
-    siegfriedData = JSON.parse(fs.readFileSync(path.join(collector.dataDir, "siegfriedOutput.json")));
+    siegfriedData = JSON.parse(fs.readFileSync(path.join(process.cwd(), "siegfriedOutput.json")));
   }
   let siegfriedDataRaw = cloneDeep(siegfriedData);
 
