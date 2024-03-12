@@ -13,7 +13,7 @@
     "url": "git+https://github.com/Language-Research-Technology/corpus-tools-ausnc-ice.git"
   },
   "dependencies": {
-    "@describo/data-packs": "^0.8.0",
+    "@ldac/data-packs": "github:Language-Research-Technology/data-packs",
     "https": "^1.0.0",
     "language-data-commons-vocabs": "github:Language-Research-Technology/language-data-commons-vocabs",
     "ldac-profile": "github:Language-Research-Technology/ldac-profile",

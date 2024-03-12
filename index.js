@@ -6,7 +6,7 @@ const path = require('path');
 const { LdacProfile } = require('ldac-profile');
 const parser = require('xml2json');
 const XLSX = require('xlsx');
-const { DataPack } = require('@describo/data-packs');
+const { DataPack } = require('@ldac/data-packs');
 const shell = require("shelljs");
 const PRONOM_URI_BASE = 'https://www.nationalarchives.gov.uk/PRONOM/';
 
@@ -31,7 +31,6 @@ async function main() {
 
   await collector.connect(); // Make or find the OCFL repo
   const data = await fs.readJSON("ICE.json");
-  collector.namespace = data.doi;
 
   // Get a new crate
 
