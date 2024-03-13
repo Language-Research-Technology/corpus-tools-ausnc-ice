@@ -52,7 +52,7 @@ async function main() {
   const subCorpus = fs.readJSONSync('subCorpus.json');
 
   corpusRoot['name'] = data.title;
-  corpusRoot['description'] = data.abstract += "This collection was previously accessible online via the Australian National Corpus (AusNC), an initiative managed by Griffith University between 2012 and 2023.";
+  corpusRoot['description'] = data.abstract;
   const publisher = data.owner.split(',');
   const publisherObj = { "@id": publisher[1], "name": publisher[0], "@type": "Organization" };
   corpusCrate.addValues(corpusRoot, 'publisher', publisherObj);
