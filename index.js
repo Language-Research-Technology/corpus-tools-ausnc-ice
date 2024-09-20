@@ -259,14 +259,14 @@ async function main() {
     }
     for (const entity of newCorpusCrate.graph) {
       if (entity['@type'].includes('File')) {
-        await newCorpus.addFile(entity, collector.dataDir, null, true); //adds each file to the repository 
+        await newCorpus.addFile(entity, collector.dataDir, null, true); //adds each file to the repository
       }
 
     }
     await newCorpus.addToRepo();
 
   }
-  
+
   //Debug data being exported
   if (collector.debug) {
     fs.writeFileSync("ro-crate_for_debug.json", JSON.stringify(corpusCrate, null, 2));
@@ -276,7 +276,7 @@ async function main() {
     if (result.errors.length > 0) {
       //process.exit(1);
     }
-    process.exit()
+    // process.exit()
   }
 
   if (siegfriedData !== siegfriedDataRaw) {
@@ -286,7 +286,7 @@ async function main() {
 
   for (const entity of corpusCrate.graph) {
     if (entity['@type'].includes('File')) {
-      await corpus.addFile(entity, collector.dataDir, null, true); //adds each file to the repository 
+      await corpus.addFile(entity, collector.dataDir, null, true); //adds each file to the repository
     }
 
   }
