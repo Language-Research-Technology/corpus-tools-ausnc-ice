@@ -4,7 +4,6 @@ const fs = require('fs-extra');
 const { cloneDeep} = require('lodash');
 const path = require('path');
 const { LdacProfile } = require('ldac-profile');
-const parser = require('xml2json');
 const XLSX = require('xlsx');
 const { DataPack } = require('@ldac/data-packs');
 const shell = require("shelljs");
