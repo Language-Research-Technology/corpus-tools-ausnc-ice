@@ -303,6 +303,7 @@ async function main() {
 
   }
 
+
   //Debug data being exported
   if (collector.debug) {
     fs.writeFileSync("ro-crate_for_debug.json", JSON.stringify(corpusCrate, null, 2));

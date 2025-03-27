@@ -5,3 +5,7 @@
 /opt
 /package-lock.json
 /storage
+ro-crate_for_debug.json
+validation_result.json
+siegfriedOutput.json
+.idea
