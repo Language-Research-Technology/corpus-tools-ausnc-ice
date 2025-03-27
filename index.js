@@ -1,11 +1,10 @@
-const { Collector, generateArcpId } = require('oni-ocfl');
+const { Collector, generateArcpId, Provenance } = require('oni-ocfl');
 const { languageProfileURI, Languages, Vocab } = require('language-data-commons-vocabs');
 const fs = require('fs-extra');
-const { cloneDeep} = require('lodash');
+const { cloneDeep } = require('lodash');
 const path = require('path');
 const { LdacProfile } = require('ldac-profile');
-const parser = require('xml2json');
-const XLSX = require('xlsx');
+//const XLSX = require('xlsx');
 const { DataPack } = require('@ldac/data-packs');
 const shell = require("shelljs");
 const PRONOM_URI_BASE = 'https://www.nationalarchives.gov.uk/PRONOM/';
@@ -52,7 +51,7 @@ async function main() {
   const subCorpus = fs.readJSONSync('subCorpus.json');
 
   corpusRoot['name'] = data.title;
-  corpusRoot['description'] = data.abstract;
+  corpusRoot['description'] = data.abstract += "This collection was previously accessible online via the Australian National Corpus (AusNC), an initiative managed by Griffith University between 2012 and 2023.";
   const publisher = data.owner.split(',');
   const publisherObj = { "@id": publisher[1], "name": publisher[0], "@type": "Organization" };
   corpusCrate.addValues(corpusRoot, 'publisher', publisherObj);
@@ -79,25 +78,41 @@ async function main() {
 
   for (let c in subCorpus) {
     const subCorpusName = `ICE: ${c}: ${subCorpus[c]}`;
-    let newCorpus = collector.newObject();
-    let newCorpusCrate = newCorpus.crate;
-    newCorpusCrate.addContext(vocab.getContext());
-    let newCorpusRoot = newCorpus.rootDataset;
-    newCorpus.mintArcpId(c);
-    newCorpusCrate.addProfile(languageProfileURI('Collection'));
-    newCorpusRoot['@type'] = ['Dataset', 'RepositoryCollection'];
-    newCorpusRoot["name"] = subCorpusName;
-    newCorpusRoot["description"] = subCorpus[c] + " from the International Corpus of English (Aus)";
-    newCorpusRoot["inLang"] = engLang;
-    newCorpusRoot.memberOf = [{ "@id": corpus.id }];
-    newCorpusCrate.addValues(newCorpusRoot, 'creator', authorObj);
-    newCorpusCrate.addValues(newCorpusRoot, 'compiler', authorObj);
-    newCorpusCrate.addValues(newCorpusRoot, 'license', licenses.data_license);
-    newCorpusCrate.addValues(newCorpusRoot, 'publisher', publisherObj);
-    newCorpusRoot['datePublished'] = data.created.replace(/.*(\d{4}).$/g, '$1');
-    newCorpusRoot['temporal'] = data.created.replace(/.*?(\d{4}).+?(\d{4}).$/g, '$1/$2');
-    const newMetadataDescriptor = newCorpusCrate.getItem('ro-crate-metadata.json');
-    newMetadataDescriptor.license = licenses.metadata_license;
+    let subcorpus = {
+      "@id": generateArcpId(collector.namespace, c),
+      "@type": ['Dataset', 'RepositoryCollection'],
+      "name": subCorpusName,
+      "description": `${subCorpus[c]} from the International Corpus of English (Aus)`,
+      "inLanguage": engLang,
+      "memberOf": [{ "@id": corpus.id }],
+      "conformsTo": { "@id": languageProfileURI("Object") },
+      "creator": authorObj,
+      "compiler": authorObj,
+      "license": licenses.data_license,
+      "publisher": publisherObj,
+      "datePublished": data.created.replace(/.*(\d{4}).$/g, '$1'),
+      "temporal": data.created.replace(/.*?(\d{4}).+?(\d{4}).$/g, '$1/$2'),
+      "hasMember": []
+    }
+    // let newCorpus = collector.newObject();
+    // let newCorpusCrate = newCorpus.crate;
+    // newCorpusCrate.addContext(vocab.getContext());
+    // let newCorpusRoot = newCorpus.rootDataset;
+    // newCorpus.mintArcpId(c);
+    // newCorpusCrate.addProfile(languageProfileURI('Collection'));
+    // newCorpusRoot['@type'] = ['Dataset', 'RepositoryCollection'];
+    // newCorpusRoot["name"] = subCorpusName;
+    // newCorpusRoot["description"] = subCorpus[c] + " from the International Corpus of English (Aus)";
+    // newCorpusRoot["inLang"] = engLang;
+    // newCorpusRoot.memberOf = [{ "@id": corpus.id }];
+    // newCorpusCrate.addValues(newCorpusRoot, 'creator', authorObj);
+    // newCorpusCrate.addValues(newCorpusRoot, 'compiler', authorObj);
+    // newCorpusCrate.addValues(newCorpusRoot, 'license', licenses.data_license);
+    // newCorpusCrate.addValues(newCorpusRoot, 'publisher', publisherObj);
+    // newCorpusRoot['datePublished'] = data.created.replace(/.*(\d{4}).$/g, '$1');
+    // newCorpusRoot['temporal'] = data.created.replace(/.*?(\d{4}).+?(\d{4}).$/g, '$1/$2');
+    // const newMetadataDescriptor = newCorpusCrate.getItem('ro-crate-metadata.json');
+    // newMetadataDescriptor.license = licenses.metadata_license;
 
     let corpusFileNames = fileNames.filter((cn) => cn.includes(c));
 
@@ -109,6 +124,7 @@ async function main() {
         let speakers = [];
         let iceType;
         obj.hasPart = [];
+        obj.speaker = [];
         for (let child in text) {
           Object.keys(text[child]).forEach(function (key) {
             children.includes(key) ? null : children.push(key);
@@ -192,7 +208,7 @@ async function main() {
               }
             } else if (c === "S2B") {
               obj.linguisticGenre = vocab.getVocabItem("Oratory");
-            } else if (c === "S2A" || c==="S1A" || c==="S1B") {
+            } else if (c === "S2A" || c === "S1A" || c === "S1B") {
               obj.linguisticGenre = vocab.getVocabItem("Dialogue");
             } else {
               let commSetting = text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/communication_setting"][0]["@id"].replace("http://ns.ausnc.org.au/schemas/ausnc_md_model/", "");
@@ -218,9 +234,9 @@ async function main() {
               "encodingFormat": [],
               "size": text[child]["http://purl.org/dc/terms/extent"][0]["@value"],
             }
-            if(objFile["name"].match(/^S/)){
-             objFile.materialType = "Transcription";
-             objFile.communicationMode = vocab.getVocabItem("SpokenLanguage");
+            if (objFile["name"].match(/^S/)) {
+              objFile.materialType = "Transcription";
+              objFile.communicationMode = vocab.getVocabItem("SpokenLanguage");
             } else {
               objFile.materialType = "PrimaryMaterial"
               objFile.communicationMode = vocab.getVocabItem("WrittenLanguage");
@@ -233,40 +249,60 @@ async function main() {
           } else if (JSON.stringify(text[child]['@id']).includes('person')) {
             speakers.push(text[child]);
           }
-        }
-
-        newCorpusCrate.addValues(newCorpusRoot, 'hasMember', obj);
-
-        for (person in speakers) {
-          const speaker = {
-            "@id": generateArcpId(collector.namespace, "speaker", speakers[person]["@id"].replace("http://app.alveo.edu.au/catalog/ice/person/", "")),
-            "@type": "Speaker"
-          }
-          for (let key in speakers[person]) {
-            if (key.startsWith('http://ns.ausnc.org.au/schemas/ausnc_md_model')) {
-              const newKey = key.replace('http://ns.ausnc.org.au/schemas/ausnc_md_model/', '');
-              speaker[newKey] = speakers[person][key][0]["@value"];
+          for (person in speakers) {
+            const speaker = {
+              "@id": generateArcpId(collector.namespace, "speaker", speakers[person]["@id"].replace("http://app.alveo.edu.au/catalog/ice/person/", "")),
+              "@type": "Person"
             }
-            if (key.startsWith('http://xmlns.com/foaf/0.1/')) {
-              const newKey = key.replace('http://xmlns.com/foaf/0.1/', '');
-              speaker[newKey] = speakers[person][key][0]["@value"];
-            }
+            for (let key in speakers[person]) {
+              if (key.startsWith('http://ns.ausnc.org.au/schemas/ausnc_md_model')) {
+                const newKey = key.replace('http://ns.ausnc.org.au/schemas/ausnc_md_model/', '');
+                speaker[newKey] = speakers[person][key][0]["@value"];
+              }
+              if (key.startsWith('http://xmlns.com/foaf/0.1/')) {
+                const newKey = key.replace('http://xmlns.com/foaf/0.1/', '');
+                speaker[newKey] = speakers[person][key][0]["@value"];
+              }
 
+            }
+            obj.speaker.push(speaker)
+            // newCorpusCrate.addValues(obj, 'speaker', speaker);
           }
-          newCorpusCrate.addValues(obj, 'speaker', speaker);
         }
+        subcorpus.hasMember.push(obj);
+        // newCorpusCrate.addValues(newCorpusRoot, 'hasMember', obj);
+
+        // for (person in speakers) {
+        //   const speaker = {
+        //     "@id": generateArcpId(collector.namespace, "speaker", speakers[person]["@id"].replace("http://app.alveo.edu.au/catalog/ice/person/", "")),
+        //     "@type": "Speaker"
+        //   }
+        //   for (let key in speakers[person]) {
+        //     if (key.startsWith('http://ns.ausnc.org.au/schemas/ausnc_md_model')) {
+        //       const newKey = key.replace('http://ns.ausnc.org.au/schemas/ausnc_md_model/', '');
+        //       speaker[newKey] = speakers[person][key][0]["@value"];
+        //     }
+        //     if (key.startsWith('http://xmlns.com/foaf/0.1/')) {
+        //       const newKey = key.replace('http://xmlns.com/foaf/0.1/', '');
+        //       speaker[newKey] = speakers[person][key][0]["@value"];
+        //     }
+
+        //   }
+        //   // newCorpusCrate.addValues(obj, 'speaker', speaker);
+        // }
       }
     }
-    for (const entity of newCorpusCrate.graph) {
-      if (entity['@type'].includes('File')) {
-        await newCorpus.addFile(entity, collector.dataDir, null, true); //adds each file to the repository 
-      }
+    // for (const entity of newCorpusCrate.graph) {
+    //   if (entity['@type'].includes('File')) {
+    //     await newCorpus.addFile(entity, collector.dataDir, null, true); //adds each file to the repository 
+    //   }
 
-    }
-    await newCorpus.addToRepo();
+    // }
+    // await newCorpus.addToRepo();
+    corpusCrate.addValues(corpusRoot, 'hasMember', subcorpus);
 
   }
-  
+
   //Debug data being exported
   if (collector.debug) {
     fs.writeFileSync("ro-crate_for_debug.json", JSON.stringify(corpusCrate, null, 2));
@@ -276,22 +312,36 @@ async function main() {
     if (result.errors.length > 0) {
       //process.exit(1);
     }
-    process.exit()
+    //process.exit()
   }
+  let provenanceFile = {
+    "@id": "ice-provenance.zip",
+    "@type": ["File"],
+    "name": "Provenance files for International Corpus of English",
+    "description": "Source files used to generate the metadata for the International Corpus of English as presented in the LDaCA Data Portal",
+    "encodingFormat":[]
+  }
+  let fileSF;
+  readSiegfried(provenanceFile, provenanceFile['@id'], fileSF, siegfriedData, collector.dataDir);
+
+  collector.prov.createAction.input = [provenanceFile];
+  corpusCrate.addEntity(provenanceFile);
 
   if (siegfriedData !== siegfriedDataRaw) {
     console.log("Writing SF Data")
     fs.writeFileSync(path.join(process.cwd(), "siegfriedOutput.json"), JSON.stringify(siegfriedData));
   }
 
+
   for (const entity of corpusCrate.graph) {
     if (entity['@type'].includes('File')) {
       await corpus.addFile(entity, collector.dataDir, null, true); //adds each file to the repository 
-    }
-
+    } 
   }
 
+
   await corpus.addToRepo(); //add the metadata to the repository
+  
 }
 
 function readSiegfried(objFile, fileID, fileSF, siegfriedData, dataDir) {
@@ -311,6 +361,7 @@ function readSiegfried(objFile, fileID, fileSF, siegfriedData, dataDir) {
     fileSF = sfData.files[0];
     siegfriedData[fileID] = sfData;
   }
+  console.log(fileSF)
   objFile['encodingFormat'].push(fileSF.matches[0].mime);
   let formatID = PRONOM_URI_BASE + fileSF.matches[0].id
   objFile['encodingFormat'].push({ '@id': formatID })
