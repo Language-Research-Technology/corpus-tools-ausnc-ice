@@ -311,7 +311,7 @@ async function main() {
     // console.log(result);
     fs.writeFileSync("validation_result.json", JSON.stringify(result, null, 2));
     if (result.errors.length > 0) {
-      //process.exit(1);
+      process.exit(1);
     }
     //process.exit()
   }
