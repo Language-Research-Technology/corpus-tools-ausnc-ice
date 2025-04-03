@@ -80,7 +80,7 @@ async function main() {
     const subCorpusName = `ICE: ${c}: ${subCorpus[c]}`;
     let subcorpus = {
       "@id": generateArcpId(collector.namespace, c),
-      "@type": ['Dataset', 'RepositoryCollection'],
+      "@type": ['RepositoryCollection'],
       "name": subCorpusName,
       "description": `${subCorpus[c]} from the International Corpus of English (Aus)`,
       "inLanguage": engLang,
