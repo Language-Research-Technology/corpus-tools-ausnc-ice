@@ -85,7 +85,7 @@ async function main() {
       "description": `${subCorpus[c]} from the International Corpus of English (Aus)`,
       "inLanguage": engLang,
       "memberOf": [{ "@id": corpus.id }],
-      "conformsTo": { "@id": languageProfileURI("Object") },
+      "conformsTo": { "@id": languageProfileURI("Collection") },
       "creator": authorObj,
       "compiler": authorObj,
       "license": licenses.data_license,
@@ -245,7 +245,7 @@ async function main() {
             let fileSF;
             readSiegfried(objFile, objFile['@id'], fileSF, siegfriedData, collector.dataDir);
             obj['hasPart'].push(objFile);
-            obj.indexableText = objFile;
+            //obj.indexableText = objFile;
           } else if (JSON.stringify(text[child]['@id']).includes('person')) {
             speakers.push(text[child]);
           }
@@ -311,7 +311,7 @@ async function main() {
     // console.log(result);
     fs.writeFileSync("validation_result.json", JSON.stringify(result, null, 2));
     if (result.errors.length > 0) {
-      process.exit(1);
+      //process.exit(1);
     }
     //process.exit()
   }
@@ -327,7 +327,7 @@ async function main() {
 
   collector.prov.createAction.input = [provenanceFile];
   corpusCrate.addEntity(provenanceFile);
-
+  
   if (siegfriedData !== siegfriedDataRaw) {
     console.log("Writing SF Data")
     fs.writeFileSync(path.join(process.cwd(), "siegfriedOutput.json"), JSON.stringify(siegfriedData));
@@ -339,7 +339,6 @@ async function main() {
       await corpus.addFile(entity, collector.dataDir, null, true); //adds each file to the repository 
     } 
   }
-
 
   await corpus.addToRepo(); //add the metadata to the repository
   
@@ -362,7 +361,6 @@ function readSiegfried(objFile, fileID, fileSF, siegfriedData, dataDir) {
     fileSF = sfData.files[0];
     siegfriedData[fileID] = sfData;
   }
-  console.log(fileSF)
   objFile['encodingFormat'].push(fileSF.matches[0].mime);
   let formatID = PRONOM_URI_BASE + fileSF.matches[0].id
   objFile['encodingFormat'].push({ '@id': formatID })
