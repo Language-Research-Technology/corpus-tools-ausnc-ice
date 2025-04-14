@@ -80,7 +80,7 @@ async function main() {
     const subCorpusName = `ICE: ${c}: ${subCorpus[c]}`;
     let subcorpus = {
       "@id": generateArcpId(collector.namespace, c),
-      "@type": ['RepositoryCollection'],
+      "@type": ['Dataset','RepositoryCollection'],
       "name": subCorpusName,
       "description": `${subCorpus[c]} from the International Corpus of English (Aus)`,
       "inLanguage": engLang,
@@ -92,7 +92,8 @@ async function main() {
       "publisher": publisherObj,
       "datePublished": data.created.replace(/.*(\d{4}).$/g, '$1'),
       "temporal": data.created.replace(/.*?(\d{4}).+?(\d{4}).$/g, '$1/$2'),
-      "hasMember": []
+      "hasMember": [],
+      "hasPart":[]
     }
     // let newCorpus = collector.newObject();
     // let newCorpusCrate = newCorpus.crate;
@@ -234,6 +235,7 @@ async function main() {
               "encodingFormat": [],
               "size": text[child]["http://purl.org/dc/terms/extent"][0]["@value"],
             }
+            console.log(objFile["@id"]);
             if (objFile["name"].match(/^S/)) {
               objFile.materialType = "Transcription";
               objFile.communicationMode = vocab.getVocabItem("SpokenLanguage");
@@ -245,6 +247,8 @@ async function main() {
             let fileSF;
             readSiegfried(objFile, objFile['@id'], fileSF, siegfriedData, collector.dataDir);
             obj['hasPart'].push(objFile);
+            subcorpus.hasPart.push(objFile);
+            process.exit()
             //obj.indexableText = objFile;
           } else if (JSON.stringify(text[child]['@id']).includes('person')) {
             speakers.push(text[child]);
@@ -270,6 +274,7 @@ async function main() {
           }
         }
         subcorpus.hasMember.push(obj);
+        obj.memberOf = subcorpus["@id"];
         // newCorpusCrate.addValues(newCorpusRoot, 'hasMember', obj);
 
         // for (person in speakers) {
