@@ -20,7 +20,6 @@
     "oni-ocfl": "github:Language-Research-Technology/oni-ocfl#v1.6",
     "read-excel-file": "^5.5.3",
     "request": "^2.88.2",
-    "ro-crate": "^3.2.0",
-    "xlsx": "^0.18.5"
+    "ro-crate": "^3.2.0"
   }
 }

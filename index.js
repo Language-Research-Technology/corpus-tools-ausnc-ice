@@ -3,7 +3,6 @@ const { languageProfileURI, Languages, Vocab } = require('language-data-commons-
 const fs = require('fs-extra');
 const { cloneDeep } = require('lodash');
 const path = require('path');
-//const XLSX = require('xlsx');
 const { DataPack } = require('@ldac/data-packs');
 const shell = require("shelljs");
 const PRONOM_URI_BASE = 'https://www.nationalarchives.gov.uk/PRONOM/';
