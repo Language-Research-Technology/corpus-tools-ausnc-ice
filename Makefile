@@ -1,5 +1,5 @@
 #! /bin/bash
-# MakeFile for creating sydney speaks repo
+# MakeFile for creating international-corpus-of-english-australia repo
 # Override BASE_DATA_DIR, REPO_OUT_DIR, BASE_TMP_DIR to point to the location of your datasets
 
 BASE_DATA_DIR=/data

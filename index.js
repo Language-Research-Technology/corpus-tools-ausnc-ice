@@ -57,7 +57,7 @@ async function main() {
   const author = data.creator.split(',');
   const authorObj = { "@id": author[1], "name": author[0], "@type": "Person" };
   corpusCrate.addValues(corpusRoot, 'creator', authorObj);
-  corpusCrate.addValues(corpusRoot, 'compiler', authorObj);
+  corpusCrate.addValues(corpusRoot, 'ldac:compiler', authorObj);
   corpusRoot['datePublished'] = data.created.replace(/.*(\d{4}).$/g, '$1');
   corpusRoot['temporal'] = data.created.replace(/.*?(\d{4}).+?(\d{4}).$/g, '$1/$2');
   corpusCrate.addValues(corpusRoot, 'license', licenses.data_license);
@@ -83,15 +83,15 @@ async function main() {
       "name": subCorpusName,
       "description": `${subCorpus[c]} from the International Corpus of English (Aus)`,
       "inLanguage": engLang,
-      "memberOf": [{ "@id": corpus.id }],
+      "pcdm:memberOf": [{ "@id": corpus.id }],
       "conformsTo": { "@id": languageProfileURI("Collection") },
       "creator": authorObj,
-      "compiler": authorObj,
+      "ldac:compiler": authorObj,
       "license": licenses.data_license,
       "publisher": publisherObj,
       "datePublished": data.created.replace(/.*(\d{4}).$/g, '$1'),
       "temporal": data.created.replace(/.*?(\d{4}).+?(\d{4}).$/g, '$1/$2'),
-      "hasMember": [],
+      "pcdm:hasMember": [],
       "hasPart":[]
     }
     // let newCorpus = collector.newObject();
@@ -124,7 +124,7 @@ async function main() {
         let speakers = [];
         let iceType;
         obj.hasPart = [];
-        obj.speaker = [];
+        obj['ldac:speaker'] = [];
         for (let child in text) {
           Object.keys(text[child]).forEach(function (key) {
             children.includes(key) ? null : children.push(key);
@@ -192,24 +192,24 @@ async function main() {
 
             if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/mode"].some(mode => mode["@id"] === "http://ns.ausnc.org.au/schemas/ausnc_md_model/spoken")) {
               iceType = "Transcription";
-              obj.communicationMode = vocab.getVocabItem("SpokenLanguage");
+              obj['ldac:communicationMode'] = vocab.getVocabItem("SpokenLanguage");
             } else {
               iceType = "PrimaryMaterial";
-              obj.communicationMode = vocab.getVocabItem("WrittenLanguage");
+              obj['ldac:communicationMode'] = vocab.getVocabItem("WrittenLanguage");
             }
 
             if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/interactivity"]) {
               if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/interactivity"][0]["@id"].includes("dialogue")) {
-                obj.linguisticGenre = vocab.getVocabItem("Dialogue");
+                obj['ldac:linguisticGenre'] = vocab.getVocabItem("Dialogue");
               } else if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/interactivity"][0]["@id"].includes("monologue")) {
-                obj.linguisticGenre = vocab.getVocabItem("Oratory");
+                obj['ldac:linguisticGenre'] = vocab.getVocabItem("Oratory");
               } else if (text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/interactivity"][0]["@id"].includes("interview")) {
-                obj.linguisticGenre = vocab.getVocabItem("Interview");
+                obj['ldac:linguisticGenre'] = vocab.getVocabItem("Interview");
               }
             } else if (c === "S2B") {
-              obj.linguisticGenre = vocab.getVocabItem("Oratory");
+              obj['ldac:linguisticGenre'] = vocab.getVocabItem("Oratory");
             } else if (c === "S2A" || c === "S1A" || c === "S1B") {
-              obj.linguisticGenre = vocab.getVocabItem("Dialogue");
+              obj['ldac:linguisticGenre'] = vocab.getVocabItem("Dialogue");
             } else {
               let commSetting = text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/communication_setting"][0]["@id"].replace("http://ns.ausnc.org.au/schemas/ausnc_md_model/", "");
               let dataMapping = {
@@ -218,9 +218,9 @@ async function main() {
                 "popular": "Informational",
                 "fiction": "Narrative"
               }
-              obj.linguisticGenre = vocab.getVocabItem(dataMapping[commSetting]);
+              obj['ldac:linguisticGenre'] = vocab.getVocabItem(dataMapping[commSetting]);
               if (obj["@id"].includes("W2C")) {
-                obj.linguisticGenre = vocab.getVocabItem("Report");
+                obj['ldac:linguisticGenre'] = vocab.getVocabItem("Report");
               }
 
             }
@@ -236,18 +236,17 @@ async function main() {
             }
             console.log(objFile["@id"]);
             if (objFile["name"].match(/^S/)) {
-              objFile.materialType = "Transcription";
-              objFile.communicationMode = vocab.getVocabItem("SpokenLanguage");
+              objFile['ldac:materialType'] = "Transcription";
+              objFile['ldac:communicationMode'] = vocab.getVocabItem("SpokenLanguage");
             } else {
-              objFile.materialType = "PrimaryMaterial"
-              objFile.communicationMode = vocab.getVocabItem("WrittenLanguage");
+              objFile['ldac:materialType'] = "PrimaryMaterial"
+              objFile['ldac:communicationMode'] = vocab.getVocabItem("WrittenLanguage");
             }
 
             let fileSF;
             readSiegfried(objFile, objFile['@id'], fileSF, siegfriedData, collector.dataDir);
             obj['hasPart'].push(objFile);
             subcorpus.hasPart.push(objFile);
-            process.exit()
             //obj.indexableText = objFile;
           } else if (JSON.stringify(text[child]['@id']).includes('person')) {
             speakers.push(text[child]);
@@ -268,12 +267,12 @@ async function main() {
               }
 
             }
-            obj.speaker.push(speaker)
+            obj['ldac:speaker'].push(speaker)
             // newCorpusCrate.addValues(obj, 'speaker', speaker);
           }
         }
-        subcorpus.hasMember.push(obj);
-        obj.memberOf = subcorpus["@id"];
+        subcorpus['pcdm:hasMember'].push(obj);
+        obj['pcdm:memberOf'] = subcorpus["@id"];
         // newCorpusCrate.addValues(newCorpusRoot, 'hasMember', obj);
 
         // for (person in speakers) {
@@ -303,7 +302,7 @@ async function main() {
 
     // }
     // await newCorpus.addToRepo();
-    corpusCrate.addValues(corpusRoot, 'hasMember', subcorpus);
+    corpusCrate.addValues(corpusRoot, 'pcdm:hasMember', subcorpus);
 
   }
 
