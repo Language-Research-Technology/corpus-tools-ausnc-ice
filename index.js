@@ -3,7 +3,6 @@ const { languageProfileURI, Languages, Vocab } = require('language-data-commons-
 const fs = require('fs-extra');
 const { cloneDeep } = require('lodash');
 const path = require('path');
-const { LdacProfile } = require('ldac-profile');
 //const XLSX = require('xlsx');
 const { DataPack } = require('@ldac/data-packs');
 const shell = require("shelljs");
@@ -309,17 +308,6 @@ async function main() {
   }
 
 
-  //Debug data being exported
-  if (collector.debug) {
-    fs.writeFileSync("ro-crate_for_debug.json", JSON.stringify(corpusCrate, null, 2));
-    var result = LdacProfile.validate(corpusCrate);
-    // console.log(result);
-    fs.writeFileSync("validation_result.json", JSON.stringify(result, null, 2));
-    if (result.errors.length > 0) {
-      //process.exit(1);
-    }
-    //process.exit()
-  }
   let provenanceFile = {
     "@id": "ice-provenance.zip",
     "@type": ["File"],
@@ -339,11 +327,11 @@ async function main() {
   }
 
 
-  for (const entity of corpusCrate.graph) {
-    if (entity['@type'].includes('File')) {
-      await corpus.addFile(entity, collector.dataDir, null, true); //adds each file to the repository 
-    } 
-  }
+  // for (const entity of corpusCrate.graph) {
+  //   if (entity['@type'].includes('File')) {
+  //     await corpus.addFile(entity, collector.dataDir, null, true); //adds each file to the repository 
+  //   } 
+  // }
 
   await corpus.addToRepo(); //add the metadata to the repository
   
