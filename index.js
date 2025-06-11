@@ -29,6 +29,9 @@ async function main() {
   await collector.connect(); // Make or find the OCFL repo
   const data = await fs.readJSON("ICE.json");
 
+  const allFiles = fs.readdirSync(collector.dataDir, { recursive: true })
+
+
   // Get a new crate
 
   // This is the main crate - TODO: actually have some data in the template collector.templateCrateDir and add it below.
@@ -44,7 +47,6 @@ async function main() {
   corpusRoot['@type'] = ['Dataset', 'RepositoryCollection'];
 
   const licenses = fs.readJSONSync('licenses.json');
-  const fileNames = fs.readdirSync(collector.dataDir);
 
   const subCorpus = fs.readJSONSync('subCorpus.json');
 
@@ -78,7 +80,7 @@ async function main() {
     const subCorpusName = `ICE: ${c}: ${subCorpus[c]}`;
     let subcorpus = {
       "@id": generateArcpId(collector.namespace, c),
-      "@type": ['Dataset','RepositoryCollection'],
+      "@type": ['Dataset', 'RepositoryCollection'],
       "name": subCorpusName,
       "description": `${subCorpus[c]} from the International Corpus of English (Aus)`,
       "inLanguage": engLang,
@@ -91,7 +93,7 @@ async function main() {
       "datePublished": data.created.replace(/.*(\d{4}).$/g, '$1'),
       "temporal": data.created.replace(/.*?(\d{4}).+?(\d{4}).$/g, '$1/$2'),
       "pcdm:hasMember": [],
-      "hasPart":[]
+      "hasPart": []
     }
     // let newCorpus = collector.newObject();
     // let newCorpusCrate = newCorpus.crate;
@@ -113,24 +115,24 @@ async function main() {
     // const newMetadataDescriptor = newCorpusCrate.getItem('ro-crate-metadata.json');
     // newMetadataDescriptor.license = licenses.metadata_license;
 
-    let corpusFileNames = fileNames.filter((cn) => cn.includes(c));
+    let corpusFileNames = allFiles.filter((cn) => cn.includes(c));
 
-    for (let file in corpusFileNames) {
-
-      if (corpusFileNames[file].includes("metadata.nt.json")) {
-        const text = await JSON.parse(fs.readFileSync(path.join(collector.dataDir, corpusFileNames[file]), "utf8"));
+    for (let file of corpusFileNames) {
+      if (file.includes("metadata.nt.json")) {
+        const text = await JSON.parse(fs.readFileSync(path.join(collector.dataDir, file), "utf8"));
         const obj = {};
         let speakers = [];
         let iceType;
         obj.hasPart = [];
         obj['ldac:speaker'] = [];
+        let id;
         for (let child in text) {
           Object.keys(text[child]).forEach(function (key) {
             children.includes(key) ? null : children.push(key);
           });
           if (JSON.stringify(text[child]['@type']).includes('AusNCObject')) {
 
-            const id = text[child]['@id'].replace("http://app.alveo.edu.au/catalog/ice/", "");
+            id = text[child]['@id'].replace("http://app.alveo.edu.au/catalog/ice/", "");
             obj['@id'] = generateArcpId(collector.namespace, 'Document', id);
             obj["@type"] = "RepositoryObject";
 
@@ -167,9 +169,7 @@ async function main() {
             }
 
             if (typeof createDate !== 'undefined') {
-
               createDate = createDate.filter(function (e) { return e });
-
               createDate.reverse();
               if (createDate[2]) {
                 createDate[2] = createDate[2].padStart(2, '0');
@@ -231,14 +231,15 @@ async function main() {
               "@type": ["File"],
               "license": licenses.data_license,
               "encodingFormat": [],
-              "size": text[child]["http://purl.org/dc/terms/extent"][0]["@value"],
+              "contentSize": text[child]["http://purl.org/dc/terms/extent"][0]["@value"] + "Bytes",
             }
-            console.log(objFile["@id"]);
+
             if (objFile["name"].match(/^S/)) {
-              objFile['ldac:materialType'] = "Transcription";
+              objFile['ldac:materialType'] = vocab.getVocabItem("Annotation");
+              objFile['ldac:annotatationType'] = vocab.getVocabItem(iceType)
               objFile['ldac:communicationMode'] = vocab.getVocabItem("SpokenLanguage");
             } else {
-              objFile['ldac:materialType'] = "PrimaryMaterial"
+              objFile['ldac:materialType'] = vocab.getVocabItem("PrimaryMaterial")
               objFile['ldac:communicationMode'] = vocab.getVocabItem("WrittenLanguage");
             }
 
@@ -246,7 +247,7 @@ async function main() {
             readSiegfried(objFile, objFile['@id'], fileSF, siegfriedData, collector.dataDir);
             obj['hasPart'].push(objFile);
             subcorpus.hasPart.push(objFile);
-            //obj.indexableText = objFile;
+            obj["ldac:indexableText"] = objFile;
           } else if (JSON.stringify(text[child]['@id']).includes('person')) {
             speakers.push(text[child]);
           }
@@ -292,7 +293,52 @@ async function main() {
         //   }
         //   // newCorpusCrate.addValues(obj, 'speaker', speaker);
         // }
+        console.log(id);
+        let objectFiles = allFiles.filter((cn) => cn.includes(id));
+        for (let f of objectFiles) {
+          if (!f.includes("data/")&&!f.includes("plain")) {
+            let objFile = {
+              "@id": f,
+              "name": f.replace(/.+\/.+\/(.+\..+)$/, "$1"),
+              "@type": ["File"],
+              "license": licenses.data_license,
+              "encodingFormat": [],
+              "contentSize": ""
+            }
+            let fileSF;
+            readSiegfried(objFile, objFile['@id'], fileSF, siegfriedData, collector.dataDir);
+            obj['hasPart'].push(objFile);
+            if (f.includes(".TXT")) {
+              obj["ldac:mainText"] = objFile;
+            }
+          }
+        }
       }
+      // } else if (file.includes(".TXT")) {
+      //   console.log(file);
+      //   let objFile = {
+      //     "@id": file,
+      //     "name": file.replace(/.+\/.+\/(.+\.TXT)/, "$1"),
+      //     "@type": ["File"],
+      //     "license": licenses.data_license,
+      //     "encodingFormat": [],
+      //     "size": ""
+      //   }
+      //   objFile.isPartOf = generateArcpId(collector.namespace, 'Document', objFile.name.replace(".TXT",""));
+      //   corpusCrate.addEntity(objFile);
+      // } else {
+      //   console.log(file)
+      //   let objFile = {
+      //     "@id": file,
+      //     "name": file.replace(/.+\/.+\/(.+\.\w{3})$/, "$1"),
+      //     "@type": ["File"],
+      //     "license": licenses.data_license,
+      //     "encodingFormat": [],
+      //     "size": ""
+      //   }
+      //   objFile.isPartOf = generateArcpId(collector.namespace, 'Document', objFile.name.replace(/\.\w{3}$/,""));
+      //   corpusCrate.addEntity(objFile);
+      // }
     }
     // for (const entity of newCorpusCrate.graph) {
     //   if (entity['@type'].includes('File')) {
@@ -311,14 +357,14 @@ async function main() {
     "@type": ["File"],
     "name": "Provenance files for International Corpus of English",
     "description": "Source files used to generate the metadata for the International Corpus of English as presented in the LDaCA Data Portal",
-    "encodingFormat":[]
+    "encodingFormat": []
   }
   let fileSF;
   readSiegfried(provenanceFile, provenanceFile['@id'], fileSF, siegfriedData, collector.dataDir);
 
   collector.prov.createAction.input = [provenanceFile];
   corpusCrate.addEntity(provenanceFile);
-  
+
   if (siegfriedData !== siegfriedDataRaw) {
     console.log("Writing SF Data")
     fs.writeFileSync(path.join(process.cwd(), "siegfriedOutput.json"), JSON.stringify(siegfriedData));
@@ -332,7 +378,7 @@ async function main() {
   // }
 
   await corpus.addToRepo(); //add the metadata to the repository
-  
+
 }
 
 function readSiegfried(objFile, fileID, fileSF, siegfriedData, dataDir) {
@@ -355,7 +401,7 @@ function readSiegfried(objFile, fileID, fileSF, siegfriedData, dataDir) {
   objFile['encodingFormat'].push(fileSF.matches[0].mime);
   let formatID = PRONOM_URI_BASE + fileSF.matches[0].id
   objFile['encodingFormat'].push({ '@id': formatID })
-  objFile['extent'] = fileSF.filesize;
+  objFile['contentSize'] = `${fileSF.filesize} bytes`;
 }
 
 main();
