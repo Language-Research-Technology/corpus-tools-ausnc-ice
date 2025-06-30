@@ -6,6 +6,7 @@ const path = require('path');
 const { DataPack } = require('@ldac/data-packs');
 const shell = require("shelljs");
 const PRONOM_URI_BASE = 'https://www.nationalarchives.gov.uk/PRONOM/';
+const { toCSV } = require('./lib/createCSV.js');
 
 async function main() {
 
@@ -293,10 +294,12 @@ async function main() {
         //   }
         //   // newCorpusCrate.addValues(obj, 'speaker', speaker);
         // }
-        console.log(id);
+
+        ///ADD CREATE ACTION TO CSV files that we generate plus provenance note in description + derived from notation etc.
+
         let objectFiles = allFiles.filter((cn) => cn.includes(id));
         for (let f of objectFiles) {
-          if (!f.includes("data/")&&!f.includes("plain")) {
+          if (!f.includes("data/") && !f.includes("plain")) {
             let objFile = {
               "@id": f,
               "name": f.replace(/.+\/.+\/(.+\..+)$/, "$1"),
@@ -310,7 +313,37 @@ async function main() {
             obj['hasPart'].push(objFile);
             if (f.includes(".TXT")) {
               obj["ldac:mainText"] = objFile;
+              objFile["ldac:materialType"] = vocab.getVocabItem("PrimaryMaterial");
+              if (!fs.existsSync(path.join(collector.dataDir, f.replace(/\.TXT$/, ".csv")))) {
+                // Convert the TXT file to CSV
+                console.log(`Converting ${f} to CSV`);
+                // Use the toCSV function to convert the text file to CSV format     
+                let csv = toCSV(generateArcpId(collector.namespace, "speaker#"), fs.readFileSync(path.join(collector.dataDir, f), "utf8"));
+                let csvFile = objFile;
+                csvFile["@id"] = f.replace(/\.TXT$/, ".csv");
+                csvFile.name = csvFile.name.replace(/\.TXT$/, ".csv");
+                csvFile["ldac:materialType"] = vocab.getVocabItem("DerivedMaterial");
+                fs.writeFileSync(path.join(collector.dataDir, csvFile["@id"]), csv, "utf8");
+                readSiegfried(csvFile, csvFile['@id'], fileSF, siegfriedData, collector.dataDir);
+                obj.hasPart.push(csvFile);
+                csvFile["ldac:derivationOf"] = objFile["@id"];
+                csvFile.description = "This file is a CSV derivative of the TXT file containing marked-up text for this object";
+              }
+              objFile["ldac:hasDerivation"] = { "@id": f.replace(/\.TXT$/, ".csv") };
+              objFile.description
+            } else if (f.includes(".csv")) {
+              objFile["ldac:derivationOf"] = { "@id": f.replace(/\.csv$/, ".TXT") };
+              objFile.description = "This file is a CSV derivative of the TXT file containing marked-up text for this object";
+            } else if (f.includes(".nt")) {
+              if (f.includes(".json")) {
+                objFile["ldac:derivationOf"] = { "@id": f.replace(".json", "") };
+                objFile.description = "This file is a JSON-LD derivative of an N-Triples file containing metadata about this object";
+              } else {
+                objFile["ldac:hasDerivation"] = { "@id": f.replace(".nt", ".nt.json") };
+                objFile.description = "This file is a N-Triples file containing metadata about this object";
+              }
             }
+
           }
         }
       }
@@ -363,6 +396,7 @@ async function main() {
   readSiegfried(provenanceFile, provenanceFile['@id'], fileSF, siegfriedData, collector.dataDir);
 
   collector.prov.createAction.input = [provenanceFile];
+  collector.prov.createAction.description = "CSV files were generated from the TXT files in the International Corpus of English";
   corpusCrate.addEntity(provenanceFile);
 
   if (siegfriedData !== siegfriedDataRaw) {
@@ -402,6 +436,10 @@ function readSiegfried(objFile, fileID, fileSF, siegfriedData, dataDir) {
   let formatID = PRONOM_URI_BASE + fileSF.matches[0].id
   objFile['encodingFormat'].push({ '@id': formatID })
   objFile['contentSize'] = `${fileSF.filesize} bytes`;
+  if (fileID.includes(".xml")) {
+    objFile['encodingFormat'] = [`application/xml`];
+    objFile['encodingFormat'].push({ '@id': PRONOM_URI_BASE + "fmt/101" })
+  }
 }
 
 main();
