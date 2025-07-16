@@ -313,29 +313,36 @@ async function main() {
             obj['hasPart'].push(objFile);
             if (f.includes(".TXT")) {
               obj["ldac:mainText"] = objFile;
-              objFile["ldac:materialType"] = vocab.getVocabItem("PrimaryMaterial");
-              if (!fs.existsSync(path.join(collector.dataDir, f.replace(/\.TXT$/, ".csv")))) {
-                // Convert the TXT file to CSV
-                console.log(`Converting ${f} to CSV`);
-                // Use the toCSV function to convert the text file to CSV format     
-                let csv = toCSV(generateArcpId(collector.namespace, "speaker#"), fs.readFileSync(path.join(collector.dataDir, f), "utf8"));
-                let csvFile = objFile;
-                csvFile["@id"] = f.replace(/\.TXT$/, ".csv");
-                csvFile.name = csvFile.name.replace(/\.TXT$/, ".csv");
-                csvFile["ldac:materialType"] = vocab.getVocabItem("DerivedMaterial");
-                fs.writeFileSync(path.join(collector.dataDir, csvFile["@id"]), csv, "utf8");
-                readSiegfried(csvFile, csvFile['@id'], fileSF, siegfriedData, collector.dataDir);
-                obj.hasPart.push(csvFile);
-                csvFile["ldac:derivationOf"] = objFile["@id"];
-                csvFile.description = "This file is a CSV derivative of the TXT file containing marked-up text for this object";
+              if (f.match(/S/)) {
+                objFile["ldac:materialType"] = vocab.getVocabItem("Annotation");
+                objFile["ldac:annotationType"] = vocab.getVocabItem("Transcription");
+                if (!fs.existsSync(path.join(collector.dataDir, f.replace(/\.TXT$/, ".csv")))) {
+                  // Convert the TXT file to CSV
+                  console.log(`Converting ${f} to CSV`);
+                  // Use the toCSV function to convert the text file to CSV format     
+                  let csv = toCSV(generateArcpId(collector.namespace, "speaker#"), fs.readFileSync(path.join(collector.dataDir, f), "utf8"));
+                  let csvFile = objFile;
+                  csvFile["@id"] = f.replace(/\.TXT$/, ".csv");
+                  csvFile.name = csvFile.name.replace(/\.TXT$/, ".csv");
+                  csvFile["ldac:materialType"] = vocab.getVocabItem("DerivedMaterial");
+                  fs.writeFileSync(path.join(collector.dataDir, csvFile["@id"]), csv, "utf8");
+                  readSiegfried(csvFile, csvFile['@id'], fileSF, siegfriedData, collector.dataDir);
+                  obj.hasPart.push(csvFile);
+                  csvFile["ldac:derivationOf"] = objFile["@id"];
+                  csvFile.description = "This file is a CSV derivative of the TXT file containing marked-up text for this object";
+                }
+                objFile["ldac:hasDerivation"] = { "@id": f.replace(/\.TXT$/, ".csv") };
+              } else {
+                objFile["ldac:materialType"] = vocab.getVocabItem("PrimaryMaterial");
               }
-              objFile["ldac:hasDerivation"] = { "@id": f.replace(/\.TXT$/, ".csv") };
-              objFile.description
+              objFile.description = "This file is a TXT file containing marked-up text for this object";
             } else if (f.includes(".csv")) {
+              objFile["ldac:materialType"] = vocab.getVocabItem("DerivedMaterial");
               objFile["ldac:derivationOf"] = { "@id": f.replace(/\.csv$/, ".TXT") };
               objFile.description = "This file is a CSV derivative of the TXT file containing marked-up text for this object";
             } else if (f.includes(".nt")) {
               if (f.includes(".json")) {
+                objFile["ldac:materialType"] = vocab.getVocabItem("DerivedMaterial");
                 objFile["ldac:derivationOf"] = { "@id": f.replace(".json", "") };
                 objFile.description = "This file is a JSON-LD derivative of an N-Triples file containing metadata about this object";
               } else {
