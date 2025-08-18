@@ -7,6 +7,7 @@ const { DataPack } = require('@ldac/data-packs');
 const shell = require("shelljs");
 const PRONOM_URI_BASE = 'https://www.nationalarchives.gov.uk/PRONOM/';
 const { toCSV } = require('./lib/createCSV.js');
+const { Console } = require('console');
 
 async function main() {
 
@@ -160,18 +161,47 @@ async function main() {
             let createDate
 
             try {
-              createDate = text[child]["http://purl.org/dc/terms/created"][0]["@value"].split(/\//);
+              console.log(text[child]["http://purl.org/dc/terms/created"][0]["@value"])
+              createDate = text[child]["http://purl.org/dc/terms/created"][0]["@value"].replace(/.+\&(.+)/, "$1").split(/\//);
             } catch (err) {
+
               try {
-                createDate = text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/source"][0]["@value"].split("-")[1].trim().split(/\//);
+                createDate = text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/dateofpublication"][0]["@value"].trim().split(/\//);
               } catch (err) {
 
               }
             }
 
+
             if (typeof createDate !== 'undefined') {
               createDate = createDate.filter(function (e) { return e });
-              createDate.reverse();
+
+              for (i in createDate) {
+                console.log(i, createDate[i])
+
+                if (createDate[i].includes("&")) {
+                  createDate[i] = createDate[i].replace(/\&.+/, "");
+                  console.log(createDate)
+                }
+
+                if(createDate[i].includes("-")){
+                  createDate[i] = createDate[i].split("-")[0];
+                }
+                if(createDate[i].includes(",")){
+                  createDate[i] = createDate[i].split(",")[0];
+                }
+                createDate[i].includes("?") ? createDate[i] = createDate[i].replace("?", "") : null;
+
+                if (createDate[i].match(/\W/)) {
+                  console.log(createDate[i])
+                  process.exit()
+                }
+              }
+
+              if (createDate[0] <= 31) {
+                createDate.reverse();
+              }
+
               if (createDate[2]) {
                 createDate[2] = createDate[2].padStart(2, '0');
               }
@@ -182,8 +212,14 @@ async function main() {
               }
 
               let createdDate = createDate.join("-");
-
+              let timestamp = Date.parse(createdDate);
+              let aDate = new Date(timestamp).toLocaleDateString("en-AU");
+              let newDate = aDate.split("/")
+              newDate = `${newDate[2]}-${newDate[1]}-${newDate[0]}`;
+              console.log(newDate)
               obj.datePublished = createdDate;
+            } else {
+              obj.datePublished = "1994";
             }
 
             if (typeof text[child]["http://purl.org/dc/terms/subject"] !== 'undefined') {
@@ -299,6 +335,7 @@ async function main() {
 
         let objectFiles = allFiles.filter((cn) => cn.includes(id));
         for (let f of objectFiles) {
+
           if (!f.includes("data/") && !f.includes("plain")) {
             let objFile = {
               "@id": f,
@@ -406,10 +443,10 @@ async function main() {
   collector.prov.createAction.description = "CSV files were generated from the TXT files in the International Corpus of English";
   corpusCrate.addEntity(provenanceFile);
 
-  if (siegfriedData !== siegfriedDataRaw) {
-    console.log("Writing SF Data")
-    fs.writeFileSync(path.join(process.cwd(), "siegfriedOutput.json"), JSON.stringify(siegfriedData));
-  }
+  // if (siegfriedData !== siegfriedDataRaw) {
+  //   console.log("Writing SF Data")
+  //   fs.writeFileSync(path.join(process.cwd(), "siegfriedOutput.json"), JSON.stringify(siegfriedData));
+  // }
 
 
   // for (const entity of corpusCrate.graph) {
