@@ -161,7 +161,6 @@ async function main() {
             let createDate
 
             try {
-              console.log(text[child]["http://purl.org/dc/terms/created"][0]["@value"])
               createDate = text[child]["http://purl.org/dc/terms/created"][0]["@value"].replace(/.+\&(.+)/, "$1").split(/\//);
             } catch (err) {
 
@@ -177,11 +176,8 @@ async function main() {
               createDate = createDate.filter(function (e) { return e });
 
               for (i in createDate) {
-                console.log(i, createDate[i])
-
                 if (createDate[i].includes("&")) {
                   createDate[i] = createDate[i].replace(/\&.+/, "");
-                  console.log(createDate)
                 }
 
                 if(createDate[i].includes("-")){
@@ -193,8 +189,7 @@ async function main() {
                 createDate[i].includes("?") ? createDate[i] = createDate[i].replace("?", "") : null;
 
                 if (createDate[i].match(/\W/)) {
-                  console.log(createDate[i])
-                  process.exit()
+                  process.exit(1)
                 }
               }
 
