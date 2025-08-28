@@ -216,7 +216,6 @@ async function main() {
               let aDate = new Date(timestamp).toLocaleDateString("en-AU");
               let newDate = aDate.split("/")
               newDate = `${newDate[2]}-${newDate[1]}-${newDate[0]}`;
-              console.log(newDate)
               obj.datePublished = createdDate;
             } else {
               obj.datePublished = "1994";
@@ -294,7 +293,7 @@ async function main() {
               "@type": "Person"
             }
             for (let key in speakers[person]) {
-              if (key.startsWith('http://ns.ausnc.org.au/schemas/ausnc_md_model')) {
+              if (key.startsWith('http://ns.ausnc.org.au/schemas/ausnc_md_model')&& !key.includes('mothertongue')) {
                 const newKey = key.replace('http://ns.ausnc.org.au/schemas/ausnc_md_model/', '');
                 speaker[newKey] = speakers[person][key][0]["@value"];
               }
@@ -336,7 +335,7 @@ async function main() {
         let objectFiles = allFiles.filter((cn) => cn.includes(id));
         for (let f of objectFiles) {
 
-          if (!f.includes("data/") && !f.includes("plain")) {
+          if (!f.includes("data/") && !f.includes("plain") && !f.includes(".nt")) {
             let objFile = {
               "@id": f,
               "name": f.replace(/.+\/.+\/(.+\..+)$/, "$1"),
