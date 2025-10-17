@@ -441,7 +441,7 @@ function tryParseDate(rawDate) {
   // y/m/d
   matches = rawDate.match(/^(9\d)\/([01]?\d)\/([0-3]?\d)$/)
   if (matches) {
-    return `19${matches[3]}-${matches[2].padStart(2, '0')}-${matches[1].padStart(2, '0')}`
+    return `19${matches[1]}-${matches[2].padStart(2, '0')}-${matches[3].padStart(2, '0')}`
   }
 
   // two-digit year after slash (e.g., `/93`)
