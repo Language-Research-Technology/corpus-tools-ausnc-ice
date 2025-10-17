@@ -158,64 +158,13 @@ async function main() {
             obj.conformsTo = { "@id": languageProfileURI("Object") };
             obj.license = licenses.data_license;
 
-            let createDate
-
-            try {
-              createDate = text[child]["http://purl.org/dc/terms/created"][0]["@value"].replace(/.+\&(.+)/, "$1").split(/\//);
-            } catch (err) {
-
-              try {
-                createDate = text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/dateofpublication"][0]["@value"].trim().split(/\//);
-              } catch (err) {
-
-              }
+            if ("http://purl.org/dc/terms/created" in text[child]) {
+              obj.datePublished = tryParseDate(text[child]["http://purl.org/dc/terms/created"][0]["@value"].trim())
             }
-
-
-            if (typeof createDate !== 'undefined') {
-              createDate = createDate.filter(function (e) { return e });
-
-              for (i in createDate) {
-                if (createDate[i].includes("&")) {
-                  createDate[i] = createDate[i].replace(/\&.+/, "");
-                }
-
-                if(createDate[i].includes("-")){
-                  createDate[i] = createDate[i].split("-")[0];
-                }
-                if(createDate[i].includes(",")){
-                  createDate[i] = createDate[i].split(",")[0];
-                }
-                createDate[i].includes("?") ? createDate[i] = createDate[i].replace("?", "") : null;
-
-                if (createDate[i].match(/\W/)) {
-                  process.exit(1)
-                }
-              }
-
-              if (createDate[0] <= 31) {
-                createDate.reverse();
-              }
-
-              if (createDate[2]) {
-                createDate[2] = createDate[2].padStart(2, '0');
-              }
-              createDate[0] = createDate[0].padStart(4, '19');
-
-              if (createDate[1]) {
-                createDate[1] = createDate[1].padStart(2, '0');
-              }
-
-              let createdDate = createDate.join("-");
-              let timestamp = Date.parse(createdDate);
-              let aDate = new Date(timestamp).toLocaleDateString("en-AU");
-              let newDate = aDate.split("/")
-              newDate = `${newDate[2]}-${newDate[1]}-${newDate[0]}`;
-              obj.datePublished = createdDate;
-            } else {
-              obj.datePublished = "1994";
+            if ("http://ns.ausnc.org.au/schemas/ausnc_md_model/dateofpublication" in text[child]) {
+              obj.datePublished = tryParseDate(text[child]["http://ns.ausnc.org.au/schemas/ausnc_md_model/dateofpublication"][0]["@value"].trim())
             }
-
+            
             if (typeof text[child]["http://purl.org/dc/terms/subject"] !== 'undefined') {
               obj.description = text[child]["http://purl.org/dc/terms/subject"][0]["@value"].replace(/^(.+?\.)(.+:.+)/, "$1");
             }
@@ -478,6 +427,57 @@ function readSiegfried(objFile, fileID, fileSF, siegfriedData, dataDir) {
     objFile['encodingFormat'] = [`application/xml`];
     objFile['encodingFormat'].push({ '@id': PRONOM_URI_BASE + "fmt/101" })
   }
+}
+
+function tryParseDate(rawDate) {
+  let matches = null
+
+  // d/m/y
+  matches = rawDate.match(/^([0-3]?\d)\/([01]?\d)\/(9\d)$/)
+  if (matches) {
+    return `19${matches[3]}-${matches[2].padStart(2, '0')}-${matches[1].padStart(2, '0')}`
+  }
+
+  // y/m/d
+  matches = rawDate.match(/^(9\d)\/([01]?\d)\/([0-3]?\d)$/)
+  if (matches) {
+    return `19${matches[3]}-${matches[2].padStart(2, '0')}-${matches[1].padStart(2, '0')}`
+  }
+
+  // two-digit year after slash (e.g., `/93`)
+  matches = rawDate.match(/^\/(9\d)$/)
+  if (matches) {
+    return `19${matches[1]}`
+  }
+
+  // just four-digit year (e.g., `1992`)
+  matches = rawDate.match(/^(199\d)$/)
+  if (matches) {
+    return matches[0]
+  }
+
+  // hyphen-, comma- or ampersand-separated days then /M/Y (e.g., `19-22/7/93`, `8,9/7/94` or `11&14/6/93`)
+  // we keep only the first day
+  matches = rawDate.match(/^([0-3]?\d)[,&-][0-3]?\d\/([01]?\d)\/(9\d)$/)
+  if (matches) {
+    return `19${matches[3]}-${matches[2].padStart(2, '0')}-${matches[1].padStart(2, '0')}`
+  }
+
+  // ampersand-separated d/m then /y (e.g., `24/7&2/10/92`)
+  // we keep only the first day/month
+  matches = rawDate.match(/^([0-3]?\d)\/([01]?\d)[,&-][0-3]?\d\/[01]?\d\/(9\d)$/)
+  if (matches) {
+    return `19${matches[3]}-${matches[2].padStart(2, '0')}-${matches[1].padStart(2, '0')}`
+  }
+
+  // m/y with possible question mark at the end (e.g., `9/93?`)
+  // we ignore the question mark, making this date seem more certain than the original metadata suggests
+  matches = rawDate.match(/^([01]?\d)\/(9\d)\??$/)
+  if (matches) {
+    return `19${matches[2]}-${matches[1].padStart(2, '0')}`
+  }
+
+  throw new Error(`could not parse date ${rawDate}`)
 }
 
 main();
