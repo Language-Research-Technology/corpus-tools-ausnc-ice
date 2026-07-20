@@ -14,13 +14,15 @@
   },
   "dependencies": {
     "@ldac/data-packs": "github:Language-Research-Technology/data-packs",
+    "exceljs": "^4.4.0",
     "https": "^1.0.0",
     "language-data-commons-vocabs": "github:Language-Research-Technology/language-data-commons-vocabs",
     "lodash": "^4.17.21",
-    "oni-ocfl": "github:Language-Research-Technology/oni-ocfl#v1.6",
+    "oni-ocfl": "github:Language-Research-Technology/oni-ocfl#v1.7.2",
     "read-excel-file": "^5.5.3",
     "request": "^2.88.2",
-    "ro-crate": "^3.2.0"
+    "ro-crate": "^3.2.0",
+    "ro-crate-excel": "^1.1.2"
   },
   "devDependencies": {
     "mocha": "^11.6.0"
