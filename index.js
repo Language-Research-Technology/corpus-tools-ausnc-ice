@@ -48,10 +48,6 @@ async function main() {
   const collector = await Collector.create();
 
   // await collector.connect(); // Make or find the OCFL repo
-  const data = await fs.readJSON("ICE.json");
-
-  
-  const allFiles = fs.readdirSync(collector.dataDir, { recursive: true })
   
   // Get a new crate
   
@@ -63,7 +59,7 @@ async function main() {
   corpus.crate = metadataTemplate.crate
 
   const corpusCrate = corpus.crate;
-  crate.addContext({ldac: "https://w3id.org/ldac/terms#"})
+  corpusCrate.addContext({ldac: "https://w3id.org/ldac/terms#"})
   const corpusRoot = corpus.crate.root;
 
   corpus.mintArcpId();
@@ -74,6 +70,12 @@ async function main() {
   const metadataDescriptor = corpusCrate.getItem('ro-crate-metadata.json');
   metadataDescriptor.license = licenses.metadata_license;
 
+  corpus.importFile(path.join(collector.dataDir, "README.html"), "README.html", {
+    "@id": "README.html",
+    "@type": ["File"],
+    "name": "ICE Readme",
+    "description": "HTML file containing a summary and description of this collection"
+  })
   corpus.importFile(path.join(collector.dataDir, "manuals/tagging-manual.pdf"), "manuals/tagging-manual.pdf", {
     "@id": "manuals/tagging-manual.pdf",
     "@type": ["File"],
