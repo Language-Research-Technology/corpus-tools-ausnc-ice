@@ -7,11 +7,14 @@ const { DataPack } = require('@ldac/data-packs');
 const shell = require("shelljs");
 const PRONOM_URI_BASE = 'https://www.nationalarchives.gov.uk/PRONOM/';
 const { toCSV } = require('./lib/createCSV.js');
+const { makePlainText } = require('./lib/makePlainText.js');
 const { Console } = require('console');
 const ExcelJS = require('exceljs');
 const roCrateExcel = require('ro-crate-excel');
 const catalogueParser = require('./lib/catalogue_parser.js')
 const demographicInfoParser = require('./lib/demographic_info_parser.js')
+
+let tempDir = fs.mkdtempDisposableSync("storage/temp/ldaca-ice")
 
 // Ensure that value is treated as String instead of Number
 const options = {
@@ -71,7 +74,27 @@ async function main() {
   const metadataDescriptor = corpusCrate.getItem('ro-crate-metadata.json');
   metadataDescriptor.license = licenses.metadata_license;
 
-  makeReadme(corpus, corpusRoot)
+  corpus.importFile(path.join(collector.dataDir, "manuals/tagging-manual.pdf"), "manuals/tagging-manual.pdf", {
+    "@id": "manuals/tagging-manual.pdf",
+    "@type": ["File"],
+    "name": "The ICE Tagging Manual",
+    "author": "Gerald Nelson",
+    "datePublished": "2005"
+  })
+  corpus.importFile(path.join(collector.dataDir, "manuals/markup-manual-spoken.pdf"), "manuals/markup-manual-spoken.pdf", {
+    "@id": "manuals/markup-manual-spoken.pdf",
+    "@type": ["File"],
+    "name": "Markup Manual for Spoken Texts",
+    "author": "Gerald Nelson",
+    "datePublished": "2002"
+  })
+  corpus.importFile(path.join(collector.dataDir, "manuals/markup-manual-written.pdf"), "manuals/markup-manual-written.pdf", {
+    "@id": "manuals/markup-manual-written.pdf",
+    "@type": ["File"],
+    "name": "Markup Manual for Written Texts",
+    "author": "Gerald Nelson",
+    "datePublished": "2002"
+  })
 
   if (fs.existsSync(path.join(process.cwd(), "siegfriedOutput.json"))) {
     console.log("Reading SF Data");
@@ -112,54 +135,36 @@ async function main() {
           item.date.map((date) => typeof(item.date) === "string" ? date : date.toISOString())
           repositoryObj.date = item.date.map(tryParseDate);
         } catch {
-          repositoryObj.date = item.date;
+          repositoryObj.date = String(item.date);
         }
       }
-      if (item.wordcount) {
-        if (typeof(item.wordcount) === "string") {
-          repositoryObj.wordcount = Number(item.wordcount.replace(/ words/, ""));
-        } else if (typeof(item.wordcount) === "number") {
-          repositoryObj.wordcount = item.wordcount
-        }
-      }
+      if (item.wordcount) repositoryObj.wordcount = item.wordcount;
       if (item.author) repositoryObj.author = item.author;
       if (item.textcode === "W2C") repositoryObj['ldac:linguisticGenre'] = vocab.getVocabItem("Report");
   
-      let filename = path.join(collector.dataDir, "ICE Written", item.textcode.slice(0, 3), `${item.textcode}.TXT`)
-      let id = path.join("original", "written", item.textcode.slice(0, 3), `${item.textcode}.TXT`)
-      if (!fs.existsSync(filename)) {
+      let filename = path.join("ICE Written", item.textcode.slice(0, 3), `${item.textcode}.TXT`)
+      if (!fs.existsSync(path.join(collector.dataDir, filename))) {
         throw new Error(`Missing file ${filename}`)
       }
       let objFile = {
-        "@id": id,
-        "name": id.replace(/.+\/.+\/(.+\..+)$/, "$1"),
+        "@id": filename,
+        "name": filename.replace(/.+\/.+\/(.+\..+)$/, "$1"),
         "@type": ["File"],
         "license": licenses.data_license,
       }
   
       repositoryObj.hasPart.push(objFile)
-      files.push([filename, id])
+      corpus.importFile(path.join(collector.dataDir, filename), filename, objFile)
 
+      // TODO: refactor this to just call plainTextCopy
+      let baseFilename = filename
       let basedOn = objFile
       {
-        let filename = path.join(collector.dataDir,`${item.textcode}-plain.txt`)
-        let id = path.join("derived", "written", item.textcode.slice(0, 3), `${item.textcode}-plain.txt`)
-        let objFile, objProv;
-        try {
-          objFile = plainTextCopy(filename, id)
-          objProv = plainTextProv(basedOn["@id"], filename)
-        } catch {
-          try {
-            filename = filename.replace(/(\d\d\d)\w-plain.txt/, "$1-plain.txt")
-            objFile = plainTextCopy(filename, id)
-            objProv = plainTextProv(basedOn["@id"], filename)
-          } catch (e) { console.log(e) }
-        }
+        let [filename, plainText] = plainTextCopy(collector, baseFilename, item.textcode)
 
-        if (objFile) {
-          repositoryObj.hasPart.push(objFile)
-          if (objProv) repositoryObj.hasPart.push(objProv);
-          files.push([filename, id])
+        if (plainText) {
+          repositoryObj.hasPart.push(plainText)
+          corpus.importFile(filename, plainText['@id'], plainText)
         } else {
           console.log(`skipping ${filename}`)
         }
@@ -189,8 +194,7 @@ async function main() {
     let subcorpusObj = corpusCrate.getItem(subcorpusId)
     corpusCrate.addValues(corpusRoot, 'pcdm:hasMember', subcorpusObj)
 
-    for (let item of spoken[i]) {
-      console.log(item.textcode)
+    for (let [index, item] of spoken[i].entries()) {
       let repositoryObj = {
         "@id": generateArcpId(collector.namespace, "Document", item.textcode),
         "@type": "RepositoryObject",
@@ -263,41 +267,29 @@ async function main() {
           throw new Error(`Unrecognised textcode prefix: ${item.textcode}`)
       }
 
-      let filename = path.join(collector.dataDir, "ICE Spoken", item.textcode.slice(0, 3), `${item.textcode.slice(0, 7)}.TXT`)
-      let id = path.join("original", "spoken", item.textcode.slice(0, 3), `${item.textcode.slice(0, 7)}.TXT`)
-      if (!fs.existsSync(filename)) {
+      let filename = path.join("ICE Spoken", item.textcode.slice(0, 3), `${item.textcode.slice(0, 7)}.TXT`)
+
+      if (!fs.existsSync(path.join(collector.dataDir, filename))) {
         throw new Error(`Missing file ${filename}`)
       }
       let objFile = {
-        "@id": id,
-        "name": id.replace(/.+\/.+\/(.+\..+)$/, "$1"),
+        "@id": filename,
+        "name": filename.replace(/.+\/.+\/(.+\..+)$/, "$1"),
         "@type": ["File"],
         "license": licenses.data_license,
       }
       
       repositoryObj.hasPart.push(objFile)
-      files.push([filename, id])
+      corpus.importFile(path.join(collector.dataDir, filename), filename, objFile)
 
-      var basedOn = objFile
+      let baseFilename = filename
       {
-        let filename = path.join(collector.dataDir,`${item.textcode}-plain.txt`)
-        let id = path.join("derived", "spoken", item.textcode.slice(0, 3), `${item.textcode}-plain.txt`)
-        let objFile, objProv;
-        try {
-          objFile = plainTextCopy(filename, id)
-          objProv = plainTextProv(basedOn["@id"], filename)
-        } catch (e) {
-          try {
-            filename = filename.replace(/(\d\d\d)\w-plain.txt/, "$1-plain.txt")
-            objFile = plainTextCopy(filename, id)
-            objProv = plainTextProv(basedOn["@id"], filename)
-          } catch (e) { console.log(e) }
-        }
+        // let id = path.join("derived", "spoken", item.textcode.slice(0, 3), `${item.textcode}-plain.txt`)
+        let [filename, plainText] = plainTextCopy(collector, baseFilename, item.textcode)
 
-        if (objFile) {
-          repositoryObj.hasPart.push(objFile)
-          if (objProv) repositoryObj.hasPart.push(objProv);
-          files.push([filename, id])
+        if (plainText) {
+          repositoryObj.hasPart.push(plainText)
+          files.push([filename, plainText['@id']])
         } else {
           console.log(`skipping ${filename}`)
         }
@@ -307,18 +299,21 @@ async function main() {
     }
   }
 
-  files.push(
-    [path.join(collector.dataDir, "metadata/demographic_info_ice-aus_s1a.xls"), "original/demographic_info_ice-aus_s1a.xls"],
-    [path.join(collector.dataDir, "metadata/demographic_info_ice-aus_s1b.xls"), "original/demographic_info_ice-aus_s1b.xls"],
-    [path.join(collector.dataDir, "metadata/demographic_info_ice-aus_s2a.xls"), "original/demographic_info_ice-aus_s2a.xls"],
-    [path.join(collector.dataDir, "metadata/demographic_info_ice-aus_s2b.xls"), "original/demographic_info_ice-aus_s2b.xls"],
-    [path.join(collector.dataDir, "metadata/ICE-catalogue.xls"), "original/ICE-catalogue.xls"],
-    [path.join(collector.dataDir, "metadata/demographic_info_ice-aus_s1a.xlsx"), "derived/demographic_info_ice-aus_s1a.xlsx"],
-    [path.join(collector.dataDir, "metadata/demographic_info_ice-aus_s1b.xlsx"), "derived/demographic_info_ice-aus_s1b.xlsx"],
-    [path.join(collector.dataDir, "metadata/demographic_info_ice-aus_s2a.xlsx"), "derived/demographic_info_ice-aus_s2a.xlsx"],
-    [path.join(collector.dataDir, "metadata/demographic_info_ice-aus_s2b.xlsx"), "derived/demographic_info_ice-aus_s2b.xlsx"],
-    [path.join(collector.dataDir, "metadata/ICE-catalogue.xlsx"), "derived/ICE-catalogue.xlsx"],
-  )
+  for (let spreadsheet of [
+    "metadata/demographic_info_ice-aus_s1a.xls",
+    "metadata/demographic_info_ice-aus_s1b.xls",
+    "metadata/demographic_info_ice-aus_s2a.xls",
+    "metadata/demographic_info_ice-aus_s2b.xls",
+    "metadata/ICE-catalogue.xls",
+    "metadata/demographic_info_ice-aus_s1a.xlsx",
+    "metadata/demographic_info_ice-aus_s1b.xlsx",
+    "metadata/demographic_info_ice-aus_s2a.xlsx",
+    "metadata/demographic_info_ice-aus_s2b.xlsx",
+    "metadata/ICE-catalogue.xlsx"
+  ]) {
+    files.push([path.join(collector.dataDir, spreadsheet), spreadsheet])
+  }
+
   await corpus.addToRepo(true, files);
 }
 
@@ -348,29 +343,34 @@ function createSubcorpus(collector, corpus, code, lang, authorObj, publisherObj,
   return [subcorpusId, subcorpusName, subcorpusObj]
 }
 
-function plainTextCopy(filename, id) {
-  if (!fs.existsSync(filename)) {
-    throw new Error(`Missing file ${filename}`)
-  }
+function plainTextCopy(collector, baseFilename, textcode) {
+  let filename = path.join(collector.dataDir,`${textcode}-plain.txt`)
+  let id = path.join(
+    "plain_text",
+    textcode.startsWith("S") ? "ICE Spoken" : "ICE Written",
+    textcode.slice(0, 3),
+    `${textcode}-plain.txt`
+  )
+
   let objFile = {
     "@id": id,
     "name": id.replace(/.+\/.+\/(.+\..+)$/, "$1"),
     "@type": ["File"],
     "license": licenses.data_license,
   }
+  if (!fs.existsSync(filename)) {
+    console.log(`Missing file ${filename}`)
 
-  return objFile
-}
+    let plainText = makePlainText(path.join(collector.dataDir, baseFilename))
+    let plaintextpath = path.join(tempDir.path, filename)
+    fs.mkdirSync(path.dirname(plaintextpath), {recursive: true})
+    fs.writeFileSync(plaintextpath, plainText)
+  
 
-function plainTextProv(object, result) {
-  return {
-    "@id": `#${result}Derived`,
-    "name": `${result} derived`,
-    "object": { "@id": object },
-    "agent": "Alveo project",
-    "instrument": "unknown; likely a script",
-    "result": { "@id": result }
+    return [plaintextpath, objFile]
   }
+
+  return [filename, objFile]
 }
 
 function readSiegfried(objFile, fileID, fileSF, siegfriedData, dataDir) {
@@ -463,162 +463,6 @@ function tryParseDate(rawDate) {
   }
 
   throw new Error(`could not parse date ${rawDate}`)
-}
-
-
-async function makeReadme(corpus, corpusRoot) {  
-  let content = `
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>${corpusRoot["name"].join(' ')}</title>
-    <style>
-      body {
-        font-family: Arial, Helvetica, sans-serif;
-        font-size: max(1vw, 16px);;
-        margin: 0;
-      }
-        main {
-        margin: 0 auto;
-        padding: 1em;
-        width: min(800px, 100vw);
-      }
-      h3 {
-        font-size: 0.6em;
-        line-height: 0;
-        margin-bottom: 4px;
-        margin-top: 2em;
-      }
-      .entity-header-row {
-        width: 100%;
-        padding: 15px;
-        padding-bottom: 25px;
-        background-color: rgb(0, 0, 0);
-        color: #fff;
-        font-size: 2em;
-        font-weight: bold;
-        text-align: center;
-      }
-      .entity-header-row h2 {
-        align-items: center;
-        text-align: center;
-        line-height: 1.1em;
-        margin-bottom: 0px;
-        justify-content: center; /* Center horizontally */
-      }
-      .entity-header-row .info {
-        text-decoration: none;
-        font-size: 0.75em;
-      }
-      .entity-header-row a {
-        color: #fff;
-        text-decoration: none;
-        font-size: 0.5em;
-        font-weight: bold;
-        line-height: 1.25;
-        margin-top: 0;
-        padding-top: 0;
-        text-decoration: underline dotted 2px;
-        text-underline-offset: 5px;
-      }
-      .entity-header-row p {
-        font-size: 0.6em;
-        display: inline;
-      }
-      p {
-        margin: auto;
-      }
-      dt {
-        font-weight: bold;
-      }
-      p + p {
-        padding-top: 0.4em;
-      }
-  </style>
-</head>
-<body>
-<h1 class="entity-header-row">${corpusRoot["name"]}</h1>
-<main>
-  <p>
-    For a complete description of this dataset see the <a href="./ro-crate-preview.html">metadata preview file</a> (ro-crate-preview.html).
-  </p>
-  <dl>
-    <dt>Date published</dt><dd>${corpusRoot["datePublished"].join(' ')}</dd>
-    <dt>License</dt><dd>${corpusRoot["license"].map(x=>x["@id"]).join(' ')}</dd>
-  </dl>
-  ${corpusRoot["description"].join('\n').split('\n').map(line => `<p>${line}</p>`).join('')}
-<pre>
-.
-├── README.html
-├── derived            -- contains derivative files created from the originals
-│   ├── ICE-catalogue.xlsx
-│   ├── demographic_info_ice-aus_s1a.xlsx
-│   ├── demographic_info_ice-aus_s1b.xlsx
-│   ├── demographic_info_ice-aus_s2a.xlsx
-│   ├── demographic_info_ice-aus_s2b.xlsx
-│   ├── spoken
-│   │   ├── S1A
-│   │   │   ├── S1A-001-plain.txt   -- plain text files that have had their ICE markup removed
-│   │   │   ├── [...]
-│   │   │   ├── S1A-057A-plain.txt  -- some plain text files are split up by subtext
-│   │   │   ├── S1A-057B-plain.txt
-│   │   │   ├── [...]
-│   │   │   └── S1A-100-plain.txt
-│   │   ├── S1B
-│   │   ├── S2A
-│   │   └── S2B
-│       │   ├── [...]
-│       │   ├── S2B-008B-plain.txt
-│       │   ├──                      -- a couple of files do not have plain text versions
-│       │   ├── S2B-010A-plain.txt
-│       │   ├── [...]
-│   └── written
-│       ├── W1A
-│       ├── W1B
-│       ├── W2A
-│       ├── W2B
-│       ├── W2C
-│       ├── W2D
-│       ├── W2E
-│       └── W2F
-├── original           -- contains data and metadata files as packaged for the ICE project
-│   ├── ICE-catalogue.xls
-│   ├── demographic_info_ice-aus_s1a.xls
-│   ├── demographic_info_ice-aus_s1b.xls
-│   ├── demographic_info_ice-aus_s2a.xls
-│   ├── demographic_info_ice-aus_s2b.xls
-│   ├── spoken
-│   │   ├── S1A
-│   │   │   ├── S1A-001.TXT
-│   │   │   ├── [...]
-│   │   │   └── S1A-100.TXT
-│   │   ├── S1B
-│   │   ├── S2A
-│   │   └── S2B
-│   └── written
-│       ├── W1A
-│       │   ├── W1A-001.TXT
-│       │   ├── [...]
-│       │   └── W1A-020.TXT
-│       ├── W1B
-│       ├── W2A
-│       ├── W2B
-│       ├── W2C
-│       ├── W2D
-│       ├── W2E
-│       └── W2F
-├── ro-crate-metadata.json
-├── ro-crate-metadata.xlsx
-└── ro-crate-preview.html
-</pre>
-  </main>
-</body>
-`
-
-  let dir = fs.mkdtempDisposableSync("storage/temp/ldaca-ice")
-  let readmepath = path.join(dir.path, "README.html") 
-  fs.writeFileSync(readmepath, content)
-  corpus.importFile(readmepath, "README.html")
 }
 
 main();
