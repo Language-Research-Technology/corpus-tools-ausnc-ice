@@ -63,7 +63,7 @@ async function main() {
   corpus.crate = metadataTemplate.crate
 
   const corpusCrate = corpus.crate;
-  corpusCrate.addContext(vocab.getContext());
+  crate.addContext({ldac: "https://w3id.org/ldac/terms#"})
   const corpusRoot = corpus.crate.root;
 
   corpus.mintArcpId();
