@@ -11,10 +11,11 @@ const { makePlainText } = require('./lib/makePlainText.js');
 const { Console } = require('console');
 const ExcelJS = require('exceljs');
 const roCrateExcel = require('ro-crate-excel');
+const tmp = require('tmp')
 const catalogueParser = require('./lib/catalogue_parser.js')
 const demographicInfoParser = require('./lib/demographic_info_parser.js')
 
-let tempDir = fs.mkdtempDisposableSync("storage/temp/ldaca-ice")
+const tempDir = tmp.dirSync({unsafeCleanup: true});
 
 // Ensure that value is treated as String instead of Number
 const options = {
@@ -364,7 +365,7 @@ function plainTextCopy(collector, baseFilename, textcode) {
     console.log(`Missing file ${filename}`)
 
     let plainText = makePlainText(path.join(collector.dataDir, baseFilename))
-    let plaintextpath = path.join(tempDir.path, filename)
+    let plaintextpath = path.join(tempDir.name, filename)
     fs.mkdirSync(path.dirname(plaintextpath), {recursive: true})
     fs.writeFileSync(plaintextpath, plainText)
   
@@ -467,4 +468,6 @@ function tryParseDate(rawDate) {
   throw new Error(`could not parse date ${rawDate}`)
 }
 
-main();
+main().then(() => {
+  tempDir.removeCallback();
+});
