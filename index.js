@@ -60,7 +60,7 @@ async function main() {
   corpus.crate = metadataTemplate.crate
 
   const corpusCrate = corpus.crate;
-  corpusCrate.addContext({ldac: "https://w3id.org/ldac/terms#"})
+
   const corpusRoot = corpus.crate.root;
 
   corpus.mintArcpId();
@@ -155,7 +155,7 @@ async function main() {
         "@type": ["File"],
         "license": licenses.data_license,
       }
-  
+
       repositoryObj.hasPart.push(objFile)
       corpus.importFile(path.join(collector.dataDir, filename), filename, objFile)
 
