@@ -236,7 +236,7 @@ async function main() {
       if (item.audience) repositoryObj.audience = item.audience;
       if (item["audience size"]) repositoryObj.audienceSize = item.audienceSize;
       if (item["organising body"]) repositoryObj.organisingBody = item["organising body"];
-      if (item["number of speakers"]) repositoryObj.numberOfParticipants = item["number of participants"];
+      if (item["number of speakers"]) repositoryObj.numberOfParticipants = Number(item["number of participants"]);
 
       
       if (item.wordcount) {
