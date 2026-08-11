@@ -71,39 +71,45 @@ async function main() {
   const metadataDescriptor = corpusCrate.getItem('ro-crate-metadata.json');
   metadataDescriptor.license = licenses.metadata_license;
 
-  corpus.importFile(path.join(collector.dataDir, "README.html"), "README.html", {
-    "@id": "README.html",
-    "@type": ["File"],
-    "name": "ICE Readme",
-    "description": "HTML file containing a summary and description of this collection"
-  })
-  corpus.importFile(path.join(collector.dataDir, "manuals/tagging-manual.pdf"), "manuals/tagging-manual.pdf", {
-    "@id": "manuals/tagging-manual.pdf",
-    "@type": ["File"],
-    "name": "The ICE Tagging Manual",
-    "author": "Gerald Nelson",
-    "datePublished": "2005"
-  })
-  corpus.importFile(path.join(collector.dataDir, "manuals/markup-manual-spoken.pdf"), "manuals/markup-manual-spoken.pdf", {
-    "@id": "manuals/markup-manual-spoken.pdf",
-    "@type": ["File"],
-    "name": "Markup Manual for Spoken Texts",
-    "author": "Gerald Nelson",
-    "datePublished": "2002"
-  })
-  corpus.importFile(path.join(collector.dataDir, "manuals/markup-manual-written.pdf"), "manuals/markup-manual-written.pdf", {
-    "@id": "manuals/markup-manual-written.pdf",
-    "@type": ["File"],
-    "name": "Markup Manual for Written Texts",
-    "author": "Gerald Nelson",
-    "datePublished": "2002"
-  })
-
   if (fs.existsSync(path.join(process.cwd(), "siegfriedOutput.json"))) {
     console.log("Reading SF Data");
     siegfriedData = JSON.parse(fs.readFileSync(path.join(process.cwd(), "siegfriedOutput.json")));
   }
   let siegfriedDataRaw = cloneDeep(siegfriedData);
+
+  let nonDataFiles = [
+    {
+      "@id": "README.html",
+      "@type": ["File"],
+      "name": "ICE Readme",
+      "description": "HTML file containing a summary and description of this collection"
+    },
+    {
+      "@id": "manuals/tagging-manual.pdf",
+      "@type": ["File"],
+      "name": "The ICE Tagging Manual",
+      "author": "Gerald Nelson",
+      "datePublished": "2005"
+    },
+    {
+      "@id": "manuals/markup-manual-spoken.pdf",
+      "@type": ["File"],
+      "name": "Markup Manual for Spoken Texts",
+      "author": "Gerald Nelson",
+      "datePublished": "2002"
+    },
+    {
+      "@id": "manuals/markup-manual-written.pdf",
+      "@type": ["File"],
+      "name": "Markup Manual for Written Texts",
+      "author": "Gerald Nelson",
+      "datePublished": "2002"
+    }
+  ]
+  for (let file of nonDataFiles) {
+    readSiegfried(file, file['@id'], siegfriedData, collector.dataDir);
+    corpus.importFile(path.join(collector.dataDir, file["@id"]), file["@id"], file)
+  }
 
   let children = [];
   
@@ -155,6 +161,7 @@ async function main() {
         "@type": ["File"],
         "license": licenses.data_license,
       }
+      readSiegfried(objFile, objFile['@id'], siegfriedData, collector.dataDir);
 
       repositoryObj.hasPart.push(objFile)
       corpus.importFile(path.join(collector.dataDir, filename), filename, objFile)
@@ -238,9 +245,9 @@ async function main() {
       if (item["organising body"]) repositoryObj.organisingBody = item["organising body"];
       if (item["number of speakers"]) {
         if (typeof(item["number of speakers"]) === "string") {
-          repositoryObj.numberOfParticipants = item["number of participants"];
+          repositoryObj.numberOfParticipants = item["number of speakers"];
         } else if (typeof(item["number of speakers"]) === "number") {
-          repositoryObj.numberOfParticipants = String(item["number of participants"]);
+          repositoryObj.numberOfParticipants = String(item["number of speakers"]);
         }
       }
 
@@ -287,7 +294,9 @@ async function main() {
         "@type": ["File"],
         "license": licenses.data_license,
       }
-      
+
+      readSiegfried(objFile, objFile['@id'], siegfriedData, collector.dataDir);
+
       repositoryObj.hasPart.push(objFile)
       corpus.importFile(path.join(collector.dataDir, filename), filename, objFile)
 
@@ -382,9 +391,8 @@ function plainTextCopy(collector, baseFilename, textcode) {
   return [filename, objFile]
 }
 
-function readSiegfried(objFile, fileID, fileSF, siegfriedData, dataDir) {
-  // TODO: re-enable this
-  return
+function readSiegfried(objFile, fileID, siegfriedData, dataDir) {
+  let fileSF;
   if (siegfriedData[fileID]) {
     fileSF = siegfriedData[fileID].files[0];
   } else {
@@ -400,6 +408,9 @@ function readSiegfried(objFile, fileID, fileSF, siegfriedData, dataDir) {
     }
     fileSF = sfData.files[0];
     siegfriedData[fileID] = sfData;
+  }
+  if (!('encodingFormat' in objFile)) {
+    objFile.encodingFormat = [];
   }
   objFile['encodingFormat'].push(fileSF.matches[0].mime);
   let formatID = PRONOM_URI_BASE + fileSF.matches[0].id
