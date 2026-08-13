@@ -487,4 +487,6 @@ function tryParseDate(rawDate) {
 
 main().then(() => {
   tempDir.removeCallback();
+  const sfCachePath = "./siegfriedOutput.json";
+  fs.writeFileSync(sfCachePath, JSON.stringify(siegfriedData))
 });
