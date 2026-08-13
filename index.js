@@ -77,42 +77,18 @@ async function main() {
   }
   let siegfriedDataRaw = cloneDeep(siegfriedData);
 
-  let nonDataFiles = [
-    {
-      "@id": "README.html",
-      "@type": ["File"],
-      "name": "ICE Readme",
-      "description": "HTML file containing a summary and description of this collection"
-    },
-    {
-      "@id": "manuals/tagging-manual.pdf",
-      "@type": ["File"],
-      "name": "The ICE Tagging Manual",
-      "author": "Gerald Nelson",
-      "datePublished": "2005"
-    },
-    {
-      "@id": "manuals/markup-manual-spoken.pdf",
-      "@type": ["File"],
-      "name": "Markup Manual for Spoken Texts",
-      "author": "Gerald Nelson",
-      "datePublished": "2002"
-    },
-    {
-      "@id": "manuals/markup-manual-written.pdf",
-      "@type": ["File"],
-      "name": "Markup Manual for Written Texts",
-      "author": "Gerald Nelson",
-      "datePublished": "2002"
-    }
-  ]
-  for (let file of nonDataFiles) {
-    readSiegfried(file, file['@id'], siegfriedData, collector.dataDir);
-    corpus.importFile(path.join(collector.dataDir, file["@id"]), file["@id"], file)
-  }
+  let manualsSubcorpusId = generateArcpId(collector.namespace, "Manuals")
+  let manualsSubcorpusObj = corpusCrate.getItem(manualsSubcorpusId)
+  corpusCrate.addValues(corpusRoot, 'pcdm:hasMember', manualsSubcorpusObj)
 
-  let children = [];
-  
+  const readmeFile = {
+    "@id": "README.html",
+    "@type": ["File"],
+    "name": "ICE Readme",
+    "description": "HTML file containing a summary and description of this collection"
+  }
+  corpus.importFile(path.join(collector.dataDir, readmeFile["@id"]), readmeFile["@id"], readmeFile)
+
   const catalogue = new ExcelJS.Workbook();
   await catalogue.xlsx.readFile(path.join(collector.dataDir, 'metadata', 'ICE-catalogue.xlsx'), {
     map(value) { return String(value) }
@@ -161,18 +137,19 @@ async function main() {
         "@type": ["File"],
         "license": licenses.data_license,
       }
-      readSiegfried(objFile, objFile['@id'], siegfriedData, collector.dataDir);
+      readSiegfried(objFile, path.join(collector.dataDir, objFile['@id']), siegfriedData);
 
       repositoryObj.hasPart.push(objFile)
       corpus.importFile(path.join(collector.dataDir, filename), filename, objFile)
 
-      // TODO: refactor this to just call plainTextCopy
       let baseFilename = filename
       let basedOn = objFile
       {
         let [filename, plainText] = plainTextCopy(collector, baseFilename, item.textcode)
 
         if (plainText) {
+          repositoryObj["ldac:indexableText"] = { "@id": plainText['@id'] }
+          readSiegfried(plainText, filename, siegfriedData);
           repositoryObj.hasPart.push(plainText)
           corpus.importFile(filename, plainText['@id'], plainText)
         } else {
@@ -295,7 +272,7 @@ async function main() {
         "license": licenses.data_license,
       }
 
-      readSiegfried(objFile, objFile['@id'], siegfriedData, collector.dataDir);
+      readSiegfried(objFile, path.join(collector.dataDir, objFile['@id']), siegfriedData);
 
       repositoryObj.hasPart.push(objFile)
       corpus.importFile(path.join(collector.dataDir, filename), filename, objFile)
@@ -306,6 +283,8 @@ async function main() {
         let [filename, plainText] = plainTextCopy(collector, baseFilename, item.textcode)
 
         if (plainText) {
+          repositoryObj["ldac:indexableText"] = { "@id": plainText['@id'] };
+          readSiegfried(plainText, filename, siegfriedData);
           repositoryObj.hasPart.push(plainText)
           files.push([filename, plainText['@id']])
         } else {
@@ -391,7 +370,7 @@ function plainTextCopy(collector, baseFilename, textcode) {
   return [filename, objFile]
 }
 
-function readSiegfried(objFile, fileID, siegfriedData, dataDir) {
+function readSiegfried(objFile, fileID, siegfriedData) {
   let fileSF;
   if (siegfriedData[fileID]) {
     fileSF = siegfriedData[fileID].files[0];
@@ -399,7 +378,7 @@ function readSiegfried(objFile, fileID, siegfriedData, dataDir) {
     let sfData;
     try {
       console.log(`Running SF on "${fileID}"`);
-      sfData = JSON.parse(shell.exec(`sf -nr -json "${path.join(dataDir, fileID)}"`, { silent: true }).stdout);
+      sfData = JSON.parse(shell.exec(`sf -nr -json "${fileID}"`, { silent: true }).stdout);
     } catch (e) {
       console.error("File identification error: " + e);
       console.error("Have you installed Siegfried?");
