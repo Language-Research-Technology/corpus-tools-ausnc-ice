@@ -314,32 +314,6 @@ async function main() {
   await corpus.addToRepo(true, files);
 }
 
-function createSubcorpus(collector, corpus, code, lang, authorObj, publisherObj, license, data) {
-  const subcorpora = fs.readJSONSync('subCorpus.json');
-
-  const subcorpusName = `ICE: ${code}: ${subcorpora[code]}`;
-  const subcorpusId = generateArcpId(collector.namespace, code)
-  const subcorpusObj = {
-    "@id": subcorpusId,
-    "@type": ['Dataset', 'RepositoryCollection'],
-    "name": subcorpusName,
-    "description": `${subcorpora[code]} from the International Corpus of English (Aus)`,
-    "inLanguage": lang,
-    "pcdm:memberOf": [{ "@id": corpus.id }],
-    "conformsTo": { "@id": languageProfileURI("Collection") },
-    "creator": authorObj,
-    "ldac:compiler": authorObj,
-    "license": license,
-    "publisher": publisherObj,
-    "datePublished": data.created.replace(/.*(\d{4}).$/g, '$1'),
-    "temporal": data.created.replace(/.*?(\d{4}).+?(\d{4}).$/g, '$1/$2'),
-    "pcdm:hasMember": [],
-    "hasPart": []
-  }
-
-  return [subcorpusId, subcorpusName, subcorpusObj]
-}
-
 function plainTextCopy(collector, baseFilename, textcode) {
   let filename = path.join(collector.dataDir,`${textcode}-plain.txt`)
   let id = path.join(
